@@ -31,10 +31,8 @@ function observable(value) {
 
     // Update can alter data._observers, make a copy before running.
     data._runObservers = new Set(data._observers);
-    data._runObservers.forEach(observer => {
-      observer._fresh = false;
-      observer();
-    });
+    data._runObservers.forEach(observer => { observer._fresh = false; });
+    data._runObservers.forEach(observer => { observer(); });
 
     tracking = clearedUpdate;
     return value;
@@ -54,7 +52,7 @@ function computed(observer, value) {
   observer._update = update;
 
   if (tracking == null) {
-    console.warn("Computeds has no parent so it will never be disposed");
+    console.warn('Computeds has no parent so it will never be disposed');
   }
 
   resetUpdate(update);
