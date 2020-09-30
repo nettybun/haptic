@@ -1,0 +1,181 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "sourceType": "module",
+    "ecmaVersion": 2020
+  },
+  // Limit TypeScript linting to TS/TSX
+  // https://github.com/typescript-eslint/typescript-eslint/issues/1928
+  "overrides": [
+    {
+      "files": [
+        "**/*.ts"
+      ],
+      "extends": [
+        "plugin:@typescript-eslint/recommended",
+        "plugin:@typescript-eslint/recommended-requiring-type-checking"
+      ],
+      "rules": {
+        "@typescript-eslint/ban-ts-comment": "off",
+        "@typescript-eslint/ban-types": [
+          "error",
+          {
+            "types": {
+              "String": {
+                "message": "Use string instead",
+                "fixWith": "string"
+              },
+              "Boolean": {
+                "message": "Use boolean instead",
+                "fixWith": "boolean"
+              },
+              "Number": {
+                "message": "Use number instead",
+                "fixWith": "number"
+              },
+              "Symbol": {
+                "message": "Use symbol instead",
+                "fixWith": "symbol"
+              },
+              "Function": {
+                "message": "Accepts any function-like value.\nIt provides no type safety"
+              },
+              "Object": {
+                "message": "Actually means \"any non-nullish value\""
+              }
+            },
+            "extendDefaults": false
+          }
+        ],
+        "@typescript-eslint/explicit-function-return-type": "off",
+        "@typescript-eslint/explicit-module-boundary-types": "off",
+        "@typescript-eslint/no-empty-function": "off",
+        "@typescript-eslint/no-explicit-any": [
+          "error",
+          {
+            "fixToUnknown": true,
+            "ignoreRestArgs": false
+          }
+        ],
+        "@typescript-eslint/no-floating-promises": [
+          "error",
+          {
+            "ignoreIIFE": true
+          }
+        ],
+        "@typescript-eslint/no-namespace": "off",
+        "@typescript-eslint/no-unused-vars": "off",
+        "@typescript-eslint/unbound-method": "off",
+        "@typescript-eslint/no-unnecessary-condition": [
+          "error",
+          {
+            "allowConstantLoopConditions": true
+          }
+        ],
+        "@typescript-eslint/no-unnecessary-type-arguments": "error",
+        "@typescript-eslint/prefer-nullish-coalescing": "error",
+        "@typescript-eslint/prefer-optional-chain": "error"
+      },
+      "parser": "@typescript-eslint/parser",
+      "parserOptions": {
+        "tsconfigRootDir": "./",
+        "project": "./tsconfig.json"
+      }
+    }
+  ],
+  "env": {
+    "es6": true,
+    "browser": true,
+    "node": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended"
+  ],
+  "rules": {
+    "block-spacing": "error",
+    "comma-dangle": [
+      "error",
+      {
+        "arrays": "always-multiline",
+        "exports": "never",
+        "functions": "never",
+        "imports": "never",
+        "objects": "always-multiline"
+      }
+    ],
+    "comma-spacing": "error",
+    "default-param-last": "error",
+    "eol-last": [
+      "error",
+      "always"
+    ],
+    "eqeqeq": "error",
+    "indent": [
+      "error",
+      2,
+      {
+        "SwitchCase": 1
+      }
+    ],
+    "key-spacing": [
+      "error",
+      {
+        "mode": "minimum"
+      }
+    ],
+    "keyword-spacing": "error",
+    "multiline-ternary": [
+      "error",
+      "always-multiline"
+    ],
+    "no-console": "off",
+    "no-fallthrough": "error",
+    "no-implicit-coercion": "error",
+    "no-invalid-this": "error",
+    "no-multi-spaces": [
+      "error",
+      {
+        "exceptions": {
+          "Property": true,
+          "TSTypeAnnotation": true
+        },
+        "ignoreEOLComments": true
+      }
+    ],
+    "no-tabs": "error",
+    "no-trailing-spaces": "error",
+    // Switch this as needed, otherwise too much noise
+    "no-unused-vars": "off",
+    "no-useless-concat": "error",
+    "object-curly-spacing": [
+      "error",
+      "always"
+    ],
+    "operator-linebreak": [
+      "error",
+      "before"
+    ],
+    "prefer-destructuring": "error",
+    "prefer-template": "error",
+    "quote-props": [
+      "error",
+      "consistent-as-needed"
+    ],
+    "quotes": [
+      "error",
+      "single"
+    ],
+    "semi": [
+      "error",
+      "always"
+    ],
+    "semi-spacing": "error",
+    "space-before-blocks": "error",
+    "space-in-parens": "error",
+    "space-infix-ops": "error",
+    "template-curly-spacing": "error",
+    "template-tag-spacing": "error"
+  }
+}
