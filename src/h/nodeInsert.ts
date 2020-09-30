@@ -11,10 +11,9 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
   // accurate if content gets pulled before clearing.
   startNode = (startNode || current instanceof Node && current) as ChildNode | null;
 
-  if (value === current) {
-    return current;
-  }
-  if (
+  // @ts-expect-error Empty if body
+  if (value === current);
+  else if (
     (!current || typeof current === 'string')
     // @ts-ignore Doesn't like `value += ''`
     // eslint-disable-next-line no-implicit-coercion
@@ -40,35 +39,35 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
     }
     // @ts-expect-error Reusing the variable but doesn't match the signature
     current = value;
-    return current;
   }
-  if (typeof value === 'function') {
+  else if (typeof value === 'function') {
     api.subscribe(() => {
       current = api.insert(el, (value as () => unknown).call({ el, endMark }), endMark, current, startNode);
     });
-    return current;
   }
-  // Block for nodes, fragments, Arrays, non-stringables and node -> stringable.
-  if (endMark) {
-    // `current` can't be `0`, it's coerced to a string in insert.
-    if (current) {
-      if (!startNode) {
-        // Support fragments
-        startNode = (
-          (current as { _startMark?: Text })._startMark
-            && (current as Frag)._startMark.nextSibling
-        ) || endMark.previousSibling;
+  else {
+    // Block for nodes, fragments, Arrays, non-stringables and node -> stringable.
+    if (endMark) {
+      // `current` can't be `0`, it's coerced to a string in insert.
+      if (current) {
+        if (!startNode) {
+          // Support fragments
+          startNode = (
+            (current as { _startMark?: Text })._startMark
+              && (current as Frag)._startMark.nextSibling
+          ) || endMark.previousSibling;
+        }
+        api.remove(el, startNode, endMark);
       }
-      api.remove(el, startNode, endMark);
+    } else {
+      el.textContent = '';
     }
-  } else {
-    el.textContent = '';
-  }
-  // TODO: Bundle size...
-  current = undefined;
+    // TODO: Bundle size...
+    current = undefined;
 
-  if (value && value !== true) {
-    current = api.add(el, value as string | number, endMark);
+    if (value && value !== true) {
+      current = api.add(el, value as string | number, endMark);
+    }
   }
   return current;
 };

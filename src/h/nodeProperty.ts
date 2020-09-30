@@ -23,51 +23,48 @@ const handleEvent = (el: NodeEvented, name: string, value?: EventHandler) => {
 
 /** Set attributes and propeties on a node */
 export const property = (el: Node, value: unknown, name: string | null, isAttr?: boolean, isCss?: boolean) => {
+  // @ts-expect-error Empty if body
   // eslint-disable-next-line eqeqeq
-  if (value == null) return;
-  if (!name
+  if (value == null);
+  else if (!name
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     || (name === 'attrs' && (isAttr = true))
   ) {
     for (name in value as object) {
       api.property(el, (value as { [k: string]: unknown })[name], name, isAttr, isCss);
     }
-    return;
   }
-  if (name[0] === 'o' && name[1] === 'n' && !(value as { $o?: 1 }).$o) {
+  else if (name[0] === 'o' && name[1] === 'n' && !(value as { $o?: 1 }).$o) {
     // Functions added as event handlers are not executed on render unless they
     // have an observable indicator
     handleEvent(el, name, value as EventHandler);
-    return;
   }
-  if (typeof value === 'function') {
+  else if (typeof value === 'function') {
     api.subscribe(() => {
       api.property(el, value.call({ el, name }), name, isAttr, isCss);
     });
-    return;
   }
-  if (isCss) {
+  else if (isCss) {
     (el as HTMLElement | SVGElement).style.setProperty(name, value as string);
-    return;
   }
-  if (
+  else if (
     isAttr
     || name.slice(0, 5) === 'data-'
     || name.slice(0, 5) === 'aria-'
   ) {
     (el as HTMLElement | SVGElement).setAttribute(name, value as string);
-    return;
   }
-  if (name === 'style') {
+  else if (name === 'style') {
     if (typeof value === 'string') {
       (el as HTMLElement | SVGElement).style.cssText = value;
     } else {
       api.property(el, value, null, isAttr, true);
     }
-    return;
   }
-  // Default case; add as a property
-  if (name === 'class') name += 'Name';
-  // @ts-expect-error
-  el[name] = value;
+  else {
+    // Default case; add as a property
+    if (name === 'class') name += 'Name';
+    // @ts-expect-error
+    el[name] = value;
+  }
 };
