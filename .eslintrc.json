@@ -74,8 +74,8 @@
           }
         ],
         "@typescript-eslint/no-unnecessary-type-arguments": "error",
-        "@typescript-eslint/prefer-nullish-coalescing": "error",
-        "@typescript-eslint/prefer-optional-chain": "error"
+        "@typescript-eslint/prefer-nullish-coalescing": "off",
+        "@typescript-eslint/prefer-optional-chain": "off"
       },
       "parser": "@typescript-eslint/parser",
       "parserOptions": {
@@ -158,7 +158,7 @@
       "before"
     ],
     "prefer-destructuring": "error",
-    "prefer-template": "error",
+    "prefer-template": "off",
     "quote-props": [
       "error",
       "consistent-as-needed"

@@ -1,11 +1,11 @@
-import { api } from './index.js'
+import { api } from './index.js';
 
-const svg = (...args) => {
+const svg = <T extends () => Element>(closure: T): ReturnType<T> => {
   const prev = api.ns;
   api.ns = 'http://www.w3.org/2000/svg';
-  const el = api.h(...args);
+  const el = closure();
   api.ns = prev;
-  return el;
+  return el as ReturnType<T>;
 };
 
 export { svg };

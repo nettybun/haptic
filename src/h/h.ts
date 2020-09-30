@@ -1,13 +1,16 @@
 import { api } from './index.js';
 
+type El = Element | Node | DocumentFragment | undefined
+type Reviver = (tag?: string | [], props?: unknown, ...children: unknown[]) => El
+
 /** Hyperscript reviver */
-const h = (...args) => {
-  let el;
-  const item = (/** @type {*} */ arg) => {
-    // @ts-ignore Allow empty if
-    // eslint-disable-next-line eqeqeq
-    if (arg == null);
-    else if (typeof arg === 'string') {
+const h: Reviver = (...args: unknown[]) => {
+  let el: El;
+  const item = (arg: unknown) => {
+    if (arg == null) { // eslint-disable-line eqeqeq
+      return;
+    }
+    if (typeof arg === 'string') {
       if (el) {
         api.add(el, arg);
       } else {
@@ -15,32 +18,43 @@ const h = (...args) => {
           ? document.createElementNS(api.ns, arg)
           : document.createElement(arg);
       }
-    } else if (Array.isArray(arg)) {
+      return;
+    }
+    if (Array.isArray(arg)) {
       // Support Fragments
       if (!el) el = document.createDocumentFragment();
       arg.forEach(item);
-    } else if (arg instanceof Node) {
+      return;
+    }
+    if (arg instanceof Node) {
       if (el) {
         api.add(el, arg);
       } else {
         // Support updates
         el = arg;
       }
-    } else if (typeof arg === 'object') {
-      api.property(el, arg, null, api.ns as Boolean);
-    } else if (typeof arg === 'function') {
+      return;
+    }
+    if (typeof arg === 'object') {
+      // TODO: Bundle size...
+      api.property(el as Node, arg, null, Boolean(api.ns));
+      return;
+    }
+    if (typeof arg === 'function') {
       if (el) {
         // See note in add.js#frag() - This is a Text('') node
-        const endMark = /** @type {Text} */ (api.add(el, ''));
+        const endMark = api.add(el, '') as Text;
         api.insert(el, arg, endMark);
       } else {
-        // Support Components
-        el = arg.apply(null, args.splice(1));
+        // Support components (unsafe)
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        el = arg(...args.splice(1));
       }
-    } else {
-      // eslint-disable-next-line no-implicit-coercion,prefer-template
-      api.add(el, '' + arg);
+      return;
     }
+    // Default case, cast as string and add
+    // TODO: Bundle size...
+    api.add(el as Node, String(arg));
   };
   args.forEach(item);
   return el;

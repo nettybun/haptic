@@ -1,8 +1,13 @@
-import { api } from './index.js'
+import { api } from './index.js';
+
+type Value = Node | string | number
+type Frag = { _startMark: Text }
+type FragReturn = Frag | Node | undefined
 
 const EMPTY_ARR: [] = [];
+const DOCUMENT_FRAGMENT_NODE = 11 as const;
 
-const asNode = (value) => {
+const asNode = (value: unknown): Text | Node | DocumentFragment => {
   if (typeof value === 'string') {
     return document.createTextNode(value);
   }
@@ -10,29 +15,29 @@ const asNode = (value) => {
   if (!(value instanceof Node)) {
     // Passing an empty array creates a DocumentFragment
     // Note this means api.add is not purely a subcall of api.h; it can nest
-    return api.h(EMPTY_ARR, value);
+    return api.h(EMPTY_ARR, value) as DocumentFragment;
   }
   return value;
 };
 
-const startMarkIfFragment = (value) => {
+const maybeFragOrNode = (value: Text | Node | DocumentFragment): FragReturn => {
   const { childNodes } = value;
-  if (!childNodes || value.nodeType !== 11) return;
+  if (value.nodeType !== DOCUMENT_FRAGMENT_NODE) return;
   if (childNodes.length < 2) return childNodes[0];
   // For a fragment of 2 elements or more add a startMark. This is required for
   // multiple nested conditional computeds that return fragments.
 
   // It looks recursive here but the next call's fragOrNode is only Text('')
-  return { _startMark: /** @type {Text} */ (api.add(value, '', childNodes[0])) };
+  return { _startMark: api.add(value, '', childNodes[0]) as Text };
 };
 
 /** Add a node before a reference node or at the end */
-const add = (parent, value, endMark) => {
+const add = (parent: Node, value: Value | Value[], endMark?: Node) => {
   value = asNode(value);
-  const fragOrNode = startMarkIfFragment(value) || value;
+  const fragOrNode = maybeFragOrNode(value) || value;
 
   // If endMark is `null`, value will be added to the end of the list.
-  parent.insertBefore(value, endMark && endMark.parentNode && endMark);
+  parent.insertBefore(value, (endMark && endMark.parentNode && endMark) as Node | null);
   return fragOrNode;
 };
 

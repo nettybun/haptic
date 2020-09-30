@@ -1,5 +1,5 @@
 /** Removes nodes, starting from `startNode` (inclusive) to `endMark` (exclusive) */
-const remove = (parent, startNode, endMark) => {
+const remove = (parent: Node, startNode: ChildNode | null, endMark: Node) => {
   while (startNode && startNode !== endMark) {
     const n = startNode.nextSibling;
     // Is needed in case the child was pulled out the parent before clearing.
@@ -10,4 +10,4 @@ const remove = (parent, startNode, endMark) => {
   }
 };
 
-export {remove };
+export { remove };

@@ -19,7 +19,7 @@ const api = {
   remove,
   // Replace this with an observable implementation to allow reactivity
   subscribe: (_: () => void) => {},
-}
+};
 
 // Reference the latest internal h() allowing others to customize the call
 const h: typeof _h = (...args) => api.h(...args);
