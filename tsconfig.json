@@ -7,5 +7,9 @@
     "emitDeclarationOnly": true,
     "strict": true,
     "outDir": "publish"
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "publish"
+  ]
 }

@@ -10,7 +10,7 @@
   "overrides": [
     {
       "files": [
-        "**/*.ts"
+        "src/**/*.ts"
       ],
       "extends": [
         "plugin:@typescript-eslint/recommended",
