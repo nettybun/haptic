@@ -1,144 +1,175 @@
-const EMPTY_ARR: [] = [];
-// TODO: This is an update() function?
-let tracking;
-// TODO: This is a transaction queue? Of data() functions?
-let queue;
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-function observable(value) {
-  function data(nextValue) {
-    if (arguments.length === 0) {
-      if (tracking && !data._observers.has(tracking)) {
-        data._observers.add(tracking);
-        tracking._observables.push(data);
+type X = any
+type Fn = () => unknown
+
+type ReadonlySocket<T> = {
+  (): T
+  $o: 1
+}
+
+type Socket<T> = ReadonlySocket<T> & {
+  (nextValue: T): T
+  _computeds: Set<Computed<X>>
+  _computedsLive: Set<Computed<X>> | undefined
+  _pending: T | []
+}
+
+type ComputedSocket<T> = ReadonlySocket<T> & {
+  _computer: Computed<T>
+}
+
+type Computed<T> = { // <T extends () => unknown> = T & {
+  (): T
+  _stale: boolean
+  _listeningTo: Socket<X>[]
+  _children: Computed<X>[]
+}
+
+const EMPTY_ARR: [] = [];
+
+let runningComputed: Computed<X> | undefined;
+let transactionSocketQueue: Socket<X>[] | undefined;
+
+function createSocket<T>(value: T): Socket<T> {
+  const socket: Socket<T> = (...args: T[]) => {
+    if (args.length === 0) {
+      if (runningComputed && !socket._computeds.has(runningComputed)) {
+        socket._computeds.add(runningComputed);
+        runningComputed._listeningTo.push(socket);
       }
       return value;
     }
 
-    if (queue) {
-      if (data._pending === EMPTY_ARR) {
-        queue.push(data);
+    const [nextValue] = args;
+
+    if (transactionSocketQueue) {
+      if (socket._pending === EMPTY_ARR) {
+        transactionSocketQueue.push(socket);
       }
-      data._pending = nextValue;
+      socket._pending = nextValue;
       return nextValue;
     }
 
     value = nextValue;
 
-    // Clear `tracking` otherwise a computed triggered by a set
-    // in another computed is seen as a child of that other computed.
-    const clearedUpdate = tracking;
-    tracking = undefined;
+    // Temporarily clear `runningComputed` otherwise a computed triggered by a
+    // set in another computed is marked as a listener
+    const prevComputed = runningComputed;
+    runningComputed = undefined;
 
-    // Update can alter data._observers, make a copy before running.
-    data._runObservers = new Set(data._observers);
-    data._runObservers.forEach(observer => { observer._fresh = false; });
-    data._runObservers.forEach(observer => { observer(); });
+    // Update can alter socket._computeds so make a copy before running
+    socket._computedsLive = new Set(socket._computeds);
+    socket._computedsLive.forEach(c => { c._stale = false; });
+    socket._computedsLive.forEach(c => { c(); });
 
-    tracking = clearedUpdate;
+    runningComputed = prevComputed;
     return value;
-  }
+  };
+  // Used in h/nodeProperty.ts
+  socket.$o = 1 as const;
+  socket._computeds = new Set<Computed<X>>();
+  socket._computedsLive = undefined;
+  // The 'not set' value must be unique so `nullish` can be set in a transaction
+  socket._pending = EMPTY_ARR;
 
-  // Tiny indicator that this is an observable function.
-  // Used in sinuous/h/src/property.js
-  data.$o = 1;
-  data._observers = new Set();
-  // The 'not set' value must be unique, so `nullish` can be set in a transaction.
-  data._pending = EMPTY_ARR;
-
-  return data;
+  return socket;
 }
 
-function computed(observer, value) {
-  observer._update = update;
-
-  if (tracking == null) {
-    console.warn('Computeds has no parent so it will never be disposed');
-  }
-
-  resetUpdate(update);
-  update();
-
-  function update() {
-    const prevTracking = tracking;
-    if (tracking) {
-      tracking._children.push(update);
+function createComputedSocket<F extends Fn, T = ReturnType<F>>(observer: F): ComputedSocket<T> {
+  let value: T;
+  const computed: Computed<T> = () => {
+    const prevRunning = runningComputed;
+    if (runningComputed) {
+      runningComputed._children.push(computed);
     }
+    const prevChildren = computed._children;
 
-    const prevChildren = update._children;
+    unsubscribe(computed);
+    computed._stale = false;
+    runningComputed = computed;
+    value = observer() as T;
 
-    unsubscribe(update);
-    update._fresh = true;
-    tracking = update;
-    value = observer(value);
-
-    // If any children computations were removed mark them as fresh.
-    // Check the diff of the children list between pre and post update.
+    // If any children computations were removed mark them as fresh (not stale)
+    // Check the diff of the children list between pre and post update
     prevChildren.forEach(u => {
-      if (update._children.indexOf(u) === -1) {
-        u._fresh = true;
+      if (computed._children.indexOf(u) === -1) {
+        u._stale = false;
       }
     });
 
-    // TODO: Remove this
-    function getChildrenDeep(children) {
-      return children.reduce(
-        (res, curr) => res.concat(curr, getChildrenDeep(curr._children)),
-        []
+    // TODO: Remove this with a while/stack
+    const getChildrenDeep = (children: Computed<X>[]): Computed<X>[] =>
+      children.reduce(
+        (acc, curr) => acc.concat(curr, getChildrenDeep(curr._children)),
+        [] as Computed<X>[]
       );
-    }
-    // If any children were marked as fresh remove them from the run lists.
-    const allChildren = getChildrenDeep(update._children);
-    allChildren.forEach(u => {
-      if (u._fresh) {
-        u._observables.forEach(o => {
-          if (o._runObservers) {
-            o._runObservers.delete(u);
-          }
+    // If any listeners were marked as fresh remove their sockets from the run lists
+    const allChildren = getChildrenDeep(computed._children);
+    allChildren.forEach(child => {
+      if (!child._stale) {
+        child._listeningTo.forEach(socket => {
+          socket._computedsLive && socket._computedsLive.delete(child);
         });
       }
     });
-
-    tracking = prevTracking;
+    runningComputed = prevRunning;
     return value;
-  }
+  };
+  computed._stale = true;
+  computed._listeningTo = [];
+  computed._children = [];
 
-  // Tiny indicator that this is an observable function.
-  // Used in sinuous/h/src/property.js
-  data.$o = 1;
-
-  function data() {
-    if (update._fresh) {
-      update._observables.forEach(o => o());
+  const computedSocket: ComputedSocket<T> = () => {
+    if (computed._stale) {
+      computed._listeningTo.forEach(socket => { socket(); });
     } else {
-      value = update();
+      value = computed();
     }
     return value;
+  };
+  // Used in h/nodeProperty.ts
+  computedSocket.$o = 1 as const;
+  computedSocket._computer = computed;
+  (observer as F & { _computer: Computed<X> })._computer = computed;
+
+  // eslint-disable-next-line eqeqeq
+  if (runningComputed == null) {
+    console.warn('Computed has no parent so it will never be disposed');
   }
 
-  return data;
+  resetComputed(computed);
+  computed();
+
+  return computedSocket;
 }
 
-
-function subscribe(observer) {
-  computed(observer);
-  return () => unsubscribe(observer._update);
+function subscribe<F extends Fn>(observer: F) {
+  const { _computer } = createComputedSocket(observer);
+  return () => unsubscribe(_computer);
 }
 
-function unsubscribe(update) {
-  update._children.forEach(unsubscribe);
-  update._observables.forEach(o => {
-    o._observers.delete(update);
-    if (o._runObservers) {
-      o._runObservers.delete(update);
-    }
+function unsubscribe(computed: Computed<X>) {
+  computed._children.forEach(unsubscribe);
+
+  computed._listeningTo.forEach(socket => {
+    socket._computeds.delete(computed);
+    socket._computedsLive && socket._computedsLive.delete(computed);
   });
-  resetUpdate(update);
+
+  resetComputed(computed);
 }
 
-function resetUpdate(update) {
-  // Keep track of which observables trigger updates. Needed for unsubscribe.
-  update._observables = [];
-  update._children = [];
+function resetComputed(computed: Computed<X>) {
+  // Keep track of which sockets trigger updates. Needed for unsubscribe.
+  computed._listeningTo = [];
+  computed._children = [];
 }
 
-export { observable, observable as o, computed, subscribe };
+export {
+  createSocket as socket,
+  createSocket as s,
+  createComputedSocket as computed,
+  subscribe,
+  unsubscribe
+};
