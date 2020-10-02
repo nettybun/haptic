@@ -11,7 +11,7 @@ type ReadonlySocket<T> = {
 type Socket<T> = ReadonlySocket<T> & {
   (nextValue: T): T
   _computeds: Set<Computed<X>>
-  _computedsLive: Set<Computed<X>> | undefined
+  _computedsRan: Set<Computed<X>> | undefined
   _pending: T | []
 }
 
@@ -22,7 +22,7 @@ type ComputedSocket<T> = ReadonlySocket<T> & {
 type Computed<T> = { // <T extends () => unknown> = T & {
   (): T
   _stale: boolean
-  _listeningTo: Socket<X>[]
+  _depSockets: Socket<X>[]
   _children: Computed<X>[]
 }
 
@@ -33,10 +33,10 @@ let transactionSocketQueue: Socket<X>[] | undefined;
 
 function createSocket<T>(value: T): Socket<T> {
   const socket: Socket<T> = (...args: T[]) => {
-    if (args.length === 0) {
+    if (!args.length) {
       if (runningComputed && !socket._computeds.has(runningComputed)) {
         socket._computeds.add(runningComputed);
-        runningComputed._listeningTo.push(socket);
+        runningComputed._depSockets.push(socket);
       }
       return value;
     }
@@ -59,9 +59,9 @@ function createSocket<T>(value: T): Socket<T> {
     runningComputed = undefined;
 
     // Update can alter socket._computeds so make a copy before running
-    socket._computedsLive = new Set(socket._computeds);
-    socket._computedsLive.forEach(c => { c._stale = false; });
-    socket._computedsLive.forEach(c => { c(); });
+    socket._computedsRan = new Set(socket._computeds);
+    socket._computedsRan.forEach(c => { c._stale = false; });
+    socket._computedsRan.forEach(c => { c(); });
 
     runningComputed = prevComputed;
     return value;
@@ -69,7 +69,7 @@ function createSocket<T>(value: T): Socket<T> {
   // Used in h/nodeProperty.ts
   socket.$o = 1 as const;
   socket._computeds = new Set<Computed<X>>();
-  socket._computedsLive = undefined;
+  socket._computedsRan = undefined;
   // The 'not set' value must be unique so `nullish` can be set in a transaction
   socket._pending = EMPTY_ARR;
 
@@ -108,8 +108,8 @@ function createComputedSocket<F extends Fn, T = ReturnType<F>>(observer: F): Com
     const allChildren = getChildrenDeep(computed._children);
     allChildren.forEach(child => {
       if (!child._stale) {
-        child._listeningTo.forEach(socket => {
-          socket._computedsLive && socket._computedsLive.delete(child);
+        child._depSockets.forEach(socket => {
+          socket._computedsRan && socket._computedsRan.delete(child);
         });
       }
     });
@@ -117,12 +117,12 @@ function createComputedSocket<F extends Fn, T = ReturnType<F>>(observer: F): Com
     return value;
   };
   computed._stale = true;
-  computed._listeningTo = [];
+  computed._depSockets = [];
   computed._children = [];
 
   const computedSocket: ComputedSocket<T> = () => {
     if (computed._stale) {
-      computed._listeningTo.forEach(socket => { socket(); });
+      computed._depSockets.forEach(socket => { socket(); });
     } else {
       value = computed();
     }
@@ -134,9 +134,9 @@ function createComputedSocket<F extends Fn, T = ReturnType<F>>(observer: F): Com
   (observer as F & { _computer: Computed<X> })._computer = computed;
 
   // eslint-disable-next-line eqeqeq
-  if (runningComputed == null) {
-    console.warn('Computed has no parent so it will never be disposed');
-  }
+  // if (runningComputed == null) {
+  //   console.warn('Computed has no parent so it will never be disposed');
+  // }
 
   resetComputed(computed);
   computed();
@@ -152,9 +152,9 @@ function subscribe<F extends Fn>(observer: F) {
 function unsubscribe(computed: Computed<X>) {
   computed._children.forEach(unsubscribe);
 
-  computed._listeningTo.forEach(socket => {
+  computed._depSockets.forEach(socket => {
     socket._computeds.delete(computed);
-    socket._computedsLive && socket._computedsLive.delete(computed);
+    socket._computedsRan && socket._computedsRan.delete(computed);
   });
 
   resetComputed(computed);
@@ -162,7 +162,7 @@ function unsubscribe(computed: Computed<X>) {
 
 function resetComputed(computed: Computed<X>) {
   // Keep track of which sockets trigger updates. Needed for unsubscribe.
-  computed._listeningTo = [];
+  computed._depSockets = [];
   computed._children = [];
 }
 

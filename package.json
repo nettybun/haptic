@@ -10,7 +10,9 @@
   },
   "author": "Gen Hames",
   "scripts": {
-    "build": "esbuild",
+    "build": "npm run build:h && npm run build:s",
+    "build:h": "esbuild --bundle src/h/index.ts --outfile=publish/h.js --format=esm --minify --sourcemap",
+    "build:s": "esbuild --bundle src/s/index.ts --outfile=publish/s.js --format=esm --minify --sourcemap",
     "dts": "tsc"
   },
   "devDependencies": {
