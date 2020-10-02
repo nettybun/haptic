@@ -16,7 +16,7 @@ type Socket<T> = ReadonlySocket<T> & {
 }
 
 type ComputedSocket<T> = ReadonlySocket<T> & {
-  _computer: Computed<T>
+  _computed: Computed<T>
 }
 
 type Computed<T> = { // <T extends () => unknown> = T & {
@@ -60,8 +60,8 @@ function createSocket<T>(value: T): Socket<T> {
 
     // Update can alter socket._computeds so make a copy before running
     socket._computedsRan = new Set(socket._computeds);
-    socket._computedsRan.forEach(c => { c._stale = false; });
-    socket._computedsRan.forEach(c => { c(); });
+    socket._computedsRan.forEach(c => { c._stale = true; });
+    socket._computedsRan.forEach(c => { if (c._stale) c(); });
 
     runningComputed = prevComputed;
     return value;
@@ -76,7 +76,7 @@ function createSocket<T>(value: T): Socket<T> {
   return socket;
 }
 
-function createComputedSocket<F extends Fn, T = ReturnType<F>>(observer: F): ComputedSocket<T> {
+function createComputedSocket<F extends Fn, T = ReturnType<F>>(fn: F): ComputedSocket<T> {
   let value: T;
   const computed: Computed<T> = () => {
     const prevComputed = runningComputed;
@@ -85,16 +85,16 @@ function createComputedSocket<F extends Fn, T = ReturnType<F>>(observer: F): Com
     }
     const prevChildren = computed._children;
 
-    unsubscribe(computed);
+    removeConnections(computed);
     computed._stale = false;
     runningComputed = computed;
-    value = observer() as T;
+    value = fn() as T;
 
     // If any children computations were removed mark them as fresh (not stale)
     // Check the diff of the children list between pre and post update
-    prevChildren.forEach(u => {
-      if (computed._children.indexOf(u) === -1) {
-        u._stale = false;
+    prevChildren.forEach(c => {
+      if (computed._children.indexOf(c) === -1) {
+        c._stale = false;
       }
     });
 
@@ -121,7 +121,7 @@ function createComputedSocket<F extends Fn, T = ReturnType<F>>(observer: F): Com
   computed._children = [];
 
   const computedSocket: ComputedSocket<T> = () => {
-    if (computed._stale) {
+    if (!computed._stale) {
       computed._depSockets.forEach(socket => { socket(); });
     } else {
       value = computed();
@@ -130,8 +130,8 @@ function createComputedSocket<F extends Fn, T = ReturnType<F>>(observer: F): Com
   };
   // Used in h/nodeProperty.ts
   computedSocket.$o = 1 as const;
-  computedSocket._computer = computed;
-  (observer as F & { _computer: Computed<X> })._computer = computed;
+  computedSocket._computed = computed;
+  (fn as F & { _computed: Computed<X> })._computed = computed;
 
   // eslint-disable-next-line eqeqeq
   // if (runningComputed == null) {
@@ -144,13 +144,17 @@ function createComputedSocket<F extends Fn, T = ReturnType<F>>(observer: F): Com
   return computedSocket;
 }
 
-function subscribe<F extends Fn>(observer: F) {
-  const { _computer } = createComputedSocket(observer);
-  return () => unsubscribe(_computer);
+function subscribe<F extends Fn>(fn: F) {
+  createComputedSocket(fn);
+  return () => unsubscribe(fn as F & { _computed: Computed<X> });
 }
 
-function unsubscribe(computed: Computed<X>) {
-  computed._children.forEach(unsubscribe);
+function unsubscribe<F extends Fn & { _computed: Computed<X> }>(fn: F) {
+  return removeConnections(fn._computed);
+}
+
+function removeConnections(computed: Computed<X>) {
+  computed._children.forEach(removeConnections);
 
   computed._depSockets.forEach(socket => {
     socket._computeds.delete(computed);
