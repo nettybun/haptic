@@ -79,7 +79,7 @@ function createSocket<T>(value: T): Socket<T> {
 function createComputedSocket<F extends Fn, T = ReturnType<F>>(observer: F): ComputedSocket<T> {
   let value: T;
   const computed: Computed<T> = () => {
-    const prevRunning = runningComputed;
+    const prevComputed = runningComputed;
     if (runningComputed) {
       runningComputed._children.push(computed);
     }
@@ -113,7 +113,7 @@ function createComputedSocket<F extends Fn, T = ReturnType<F>>(observer: F): Com
         });
       }
     });
-    runningComputed = prevRunning;
+    runningComputed = prevComputed;
     return value;
   };
   computed._stale = true;
@@ -166,10 +166,49 @@ function resetComputed(computed: Computed<X>) {
   computed._children = [];
 }
 
+function transaction(fn: Fn) {
+  const prevQueue = transactionSocketQueue;
+  transactionSocketQueue = [];
+  const value = fn();
+  const sockets = transactionSocketQueue;
+  transactionSocketQueue = prevQueue;
+  sockets.forEach(s => {
+    if (s._pending !== EMPTY_ARR) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const pending = s._pending;
+      s._pending = EMPTY_ARR;
+      s(pending);
+    }
+  });
+  return value;
+}
+
+function sample(fn: Fn) {
+  const prevComputed = runningComputed;
+  runningComputed = undefined;
+  const value = fn();
+  runningComputed = prevComputed;
+  return value;
+}
+
+function on(sockets: Socket<X>[], fn: Fn, options = { onlyChanges: true }) {
+  sockets = ([] as Socket<X>[]).concat(sockets);
+  return createComputedSocket(() => {
+    sockets.forEach(socket => { socket(); });
+    let value;
+    if (!options.onlyChanges) value = sample(fn);
+    options.onlyChanges = false;
+    return value;
+  });
+}
+
 export {
   createSocket as socket,
   createSocket as s,
   createComputedSocket as computed,
   subscribe,
-  unsubscribe
+  unsubscribe,
+  transaction,
+  sample,
+  on
 };
