@@ -1,33 +1,30 @@
 declare type X = any;
 declare type Fn = () => unknown;
-declare type ReadonlySocket<T> = {
+declare type Base<T> = {
     (): T;
     $o: 1;
 };
-declare type Socket<T> = ReadonlySocket<T> & {
+declare type Subject<T> = Base<T> & {
     (nextValue: T): T;
-    _computeds: Set<Computed<X>>;
-    _computedsRan: Set<Computed<X>> | undefined;
-    _pending: T | [];
+    observers: Set<Update<X>>;
+    observersRan: Set<Update<X>> | undefined;
+    pending: T | [];
 };
-declare type ComputedSocket<T> = ReadonlySocket<T> & {
-    _computed: Computed<T>;
+declare type ComputedSubject<T> = Base<T> & {
+    update: Update<T>;
 };
-declare type Computed<T> = {
+declare type Update<T> = {
     (): T;
-    _stale: boolean;
-    _depSockets: Socket<X>[];
-    _children: Computed<X>[];
+    stale: boolean;
+    subjects: Subject<X>[];
+    children: Update<X>[];
 };
-declare function createSocket<T>(value: T): Socket<T>;
-declare function createComputedSocket<F extends Fn, T = ReturnType<F>>(fn: F): ComputedSocket<T>;
+declare function createSubject<T>(value: T): Subject<T>;
+declare function createComputedSubject<F extends Fn, T = ReturnType<F>>(fn: F): ComputedSubject<T>;
 declare function subscribe<F extends Fn>(fn: F): () => void;
-declare function unsubscribe<F extends Fn & {
-    _computed: Computed<X>;
-}>(fn: F): void;
+declare function unsubscribe<F extends Fn & { _update: Update<X>; }>(fn: F): void;
 declare function transaction(fn: Fn): unknown;
 declare function sample(fn: Fn): unknown;
-declare function on(sockets: Socket<X>[], fn: Fn, options?: {
-    onlyChanges: boolean;
-}): ComputedSocket<unknown>;
-export { createSocket as socket, createSocket as s, createComputedSocket as computed, subscribe, unsubscribe, transaction, sample, on };
+declare function on(subjects: Subject<X>[], fn: Fn, options?: { onlyChanges: boolean; }): ComputedSubject<unknown>;
+export { Subject, ComputedSubject, Update };
+export { createSubject as s, createSubject as subject, createComputedSubject as computed, subscribe, unsubscribe, transaction, sample, on };
