@@ -10,9 +10,10 @@
   },
   "author": "Gen Hames",
   "scripts": {
-    "build": "npm run build:h && npm run build:s",
-    "build:h": "esbuild --bundle src/h/index.ts --outfile=publish/h.js --format=esm --minify --sourcemap",
-    "build:s": "esbuild --bundle src/s/index.ts --outfile=publish/s.js --format=esm --minify --sourcemap",
+    "build": "npm run build:h && npm run build:s && npm run build:index",
+    "build:h": "esbuild --bundle src/h/index.ts --outfile=publish/h/index.js --format=esm --minify --sourcemap",
+    "build:s": "esbuild --bundle src/s/index.ts --outfile=publish/s/index.js --format=esm --minify --sourcemap",
+    "build:index": "esbuild --bundle src/index.ts --outfile=publish/index.js --format=esm --minify --sourcemap",
     "dts": "tsc"
   },
   "devDependencies": {
