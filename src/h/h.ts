@@ -1,10 +1,13 @@
 import { api } from './index.js';
 
-type El = Element | Node | DocumentFragment | undefined
-type Reviver = (tag?: string | [], props?: unknown, ...children: unknown[]) => El
+import type { JSXInternal } from '../jsx';
+// @ts-expect-error Not allowed to use `import type` but still works
+declare namespace h { export import JSX = JSXInternal; }
 
-/** Hyperscript reviver */
-const h: Reviver = (...args: unknown[]) => {
+type El = Element | Node | DocumentFragment | undefined
+
+function h(tag?: string | [], props?: unknown, ...children: unknown[]): El
+function h(...args: unknown[]): El {
   let el: El;
   const item = (arg: unknown) => {
     // @ts-expect-error Empty if body
@@ -55,6 +58,6 @@ const h: Reviver = (...args: unknown[]) => {
   };
   args.forEach(item);
   return el;
-};
+}
 
 export { h };
