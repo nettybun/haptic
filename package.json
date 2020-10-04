@@ -3,12 +3,14 @@
   "version": "0.0.0",
   "description": "TSX sibling of Sinuous with less twist",
   "keywords": [],
+  "type": "module",
+  "main": "src/index.ts",
   "license": "MIT",
+  "author": "Gen Hames",
   "repository": {
     "type": "git",
     "url": "https://gitlab.com/nthm/sinueux"
   },
-  "author": "Gen Hames",
   "scripts": {
     "build": "npm run build:h && npm run build:s && npm run build:index",
     "build:h": "esbuild --bundle src/h/index.ts --outfile=publish/h/index.js --format=esm --minify --sourcemap",

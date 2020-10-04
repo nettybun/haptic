@@ -1,0 +1,13 @@
+{
+  "name": "sinueux",
+  "version": "0.0.0",
+  "description": "TSX sibling of Sinuous with less twist",
+  "type": "module",
+  "main": "index.js",
+  "license": "MIT",
+  "author": "Gen Hames",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/nthm/sinueux"
+  }
+}
