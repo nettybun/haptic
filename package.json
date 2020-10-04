@@ -14,6 +14,8 @@
     "build:h": "esbuild --bundle src/h/index.ts --outfile=publish/h/index.js --format=esm --minify --sourcemap",
     "build:s": "esbuild --bundle src/s/index.ts --outfile=publish/s/index.js --format=esm --minify --sourcemap",
     "build:index": "esbuild --bundle src/index.ts --outfile=publish/index.js --format=esm --minify --sourcemap",
+    "build:index-external-sed": "esbuild --bundle src/index.ts --outfile=publish/index.js --format=esm --minify --sourcemap --external:./s && sed -i 's|\\./s|sinueux/s|' publish/index.js",
+    "build:index-external-tsc": "esbuild --bundle src/index.ts --outfile=publish/index.js --format=esm --minify --sourcemap --external:sinueux/s",
     "dts": "tsc"
   },
   "devDependencies": {

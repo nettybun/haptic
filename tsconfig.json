@@ -6,7 +6,20 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "strict": true,
-    "outDir": "publish"
+    "outDir": "publish",
+    "baseUrl": ".",
+    // Using sinueux/* to src/ results in a circular import
+    "paths": {
+      "sinueux/h": [
+        "src/h"
+      ],
+      "sinueux/s": [
+        "src/s"
+      ],
+      "sinueux/jsx": [
+        "src/jsx.d.ts"
+      ]
+    }
   },
   "exclude": [
     "node_modules",
