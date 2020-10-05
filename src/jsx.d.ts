@@ -18,7 +18,8 @@
 // solution please let me know!
 
 // Sadly I think the best option is to copy/paste these 900 lines of code into a
-// new file and make edits there. I do this for Sinueux' h+s bundle.
+// new file and make edits there.
+// TODO: Do this for Sinueux' h+s bundle if nothing ends up working for ESLint
 
 export namespace JSXInternal {
   type Element = HTMLElement
