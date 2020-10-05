@@ -4,6 +4,7 @@
   "description": "TSX sibling of Sinuous with less twist",
   "type": "module",
   "main": "index.js",
+  "types": "index.d.ts",
   "license": "MIT",
   "author": "Gen Hames",
   "repository": {
