@@ -15,40 +15,40 @@ import { subscribe } from 'sinueux/s';
 import { h, api } from 'sinueux/h';
 
 import type { Subject } from 'sinueux/s';
-import type { JSXInternal } from 'sinueux/jsx';
+import type {
+  GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements
+} from 'sinueux/jsx';
 
 api.subscribe = subscribe;
 
 export { h, api };
 
-// Extend the JSX namespace to support observer subjects
-// If developers want to use a different subscribe implementation, edit this
+type El = Element | Node | DocumentFragment | undefined
+declare function h(tag?: string | [], props?: unknown, ...children: unknown[]): El
+
 declare namespace h {
   export namespace JSX {
-    type MaybeSubject<T> = T | Subject<T>
-    type AllowSubject<Props> = { [K in keyof Props]: MaybeSubject<Props[K]> }
+    type Element = HTMLElement;
+
+    interface ElementAttributesProperty { props: unknown; }
+    interface ElementChildrenAttribute { children: unknown; }
 
     // Prevent children on components that don't declare them
-    interface IntrinsicAttributes { children?: never }
+    interface IntrinsicAttributes { children?: never; }
 
     // Allow children on all DOM elements (not components, see above)
     // ESLint will error for children on void elements like <img/>
     type DOMAttributes<Target extends EventTarget>
-      = AllowSubject<
-          JSXInternal.DOMAttributes<Target>
-          & { children?: unknown }>
+      = GenericEventAttrs<Target> & { children?: unknown };
 
-    type HTMLAttributes<RefType extends EventTarget = EventTarget>
-      = AllowSubject<Omit<JSXInternal.HTMLAttributes<RefType>, 'style'>>
-        & { style?:
-              | MaybeSubject<string>
-              | { [key: string]: MaybeSubject<string | number> }
-          }
+    type HTMLAttributes<Target extends EventTarget>
+      = HTMLAttrs & DOMAttributes<Target>;
 
-    type SVGAttributes<Target extends EventTarget = SVGElement>
-      = AllowSubject<JSXInternal.SVGAttributes<Target>>
+    type SVGAttributes<Target extends EventTarget>
+      = SVGAttrs & HTMLAttrs & DOMAttributes<Target>;
 
-    type IntrinsicElements
-      = AllowSubject<JSXInternal.IntrinsicElements>
+    type IntrinsicElements =
+      & { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>; }
+      & { [El in keyof SVGElements]: SVGAttributes<SVGElements[El]>; }
   }
 }
