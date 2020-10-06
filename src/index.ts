@@ -23,11 +23,11 @@ api.subscribe = subscribe;
 
 export { h, api };
 
-type El = Element | Node | DocumentFragment | undefined
-declare function h(tag?: string | [], props?: unknown, ...children: unknown[]): El
-
 declare namespace h {
   export namespace JSX {
+    type MaybeSubject<T> = T | Subject<T>;
+    type AllowSubject<Props> = { [K in keyof Props]: MaybeSubject<Props[K]> };
+
     type Element = HTMLElement;
 
     interface ElementAttributesProperty { props: unknown; }
@@ -39,13 +39,18 @@ declare namespace h {
     // Allow children on all DOM elements (not components, see above)
     // ESLint will error for children on void elements like <img/>
     type DOMAttributes<Target extends EventTarget>
-      = GenericEventAttrs<Target> & { children?: unknown };
+      = AllowSubject<GenericEventAttrs<Target>> & { children?: unknown };
 
     type HTMLAttributes<Target extends EventTarget>
-      = HTMLAttrs & DOMAttributes<Target>;
+      = AllowSubject<Omit<HTMLAttrs, 'style'>>
+        & { style?:
+            | MaybeSubject<string>
+            | { [key: string]: MaybeSubject<string | number> };
+          }
+        & DOMAttributes<Target>;
 
     type SVGAttributes<Target extends EventTarget>
-      = SVGAttrs & HTMLAttrs & DOMAttributes<Target>;
+      = AllowSubject<SVGAttrs> & HTMLAttributes<Target>;
 
     type IntrinsicElements =
       & { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>; }
