@@ -15,9 +15,6 @@
       ],
       "sinueux/s": [
         "src/s"
-      ],
-      "sinueux/jsx": [
-        "src/jsx.d.ts"
       ]
     }
   },

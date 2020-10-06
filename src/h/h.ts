@@ -2,7 +2,7 @@ import { api } from './index.js';
 
 import type {
   GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements
-} from 'sinueux/jsx';
+} from '../jsx';
 
 type El = Element | Node | DocumentFragment | undefined
 

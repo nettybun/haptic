@@ -17,7 +17,7 @@ import { h, api } from 'sinueux/h';
 import type { Subject } from 'sinueux/s';
 import type {
   GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements
-} from 'sinueux/jsx';
+} from './jsx';
 
 api.subscribe = subscribe;
 
