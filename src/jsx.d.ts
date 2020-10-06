@@ -199,7 +199,7 @@ declare module 'sinueux/jsx' {
     <Target extends EventTarget> = EventHandler<TargetedEvent<Target, WheelEvent>>;
 
   // Receives an element as Target such as HTMLDivElement
-  type GenericEventAttributes<Target extends EventTarget> = {
+  type GenericEventAttrs<Target extends EventTarget> = {
     // Image Events
     onLoad?: GenericEventHandler<Target>;
     onLoadCapture?: GenericEventHandler<Target>;
@@ -393,7 +393,7 @@ declare module 'sinueux/jsx' {
   };
 
   // Note: HTML elements will also need GenericEventAttributes
-  type HTMLAttributes = {
+  type HTMLAttrs = {
     // Standard HTML Attributes
     accept?: string;
     acceptCharset?: string;
@@ -547,7 +547,7 @@ declare module 'sinueux/jsx' {
   };
 
   // Note: SVG elements will also need HTMLAttributes and GenericEventAttributes
-  type SVGAttributes = {
+  type SVGAttrs = {
     accentHeight?: number | string;
     accumulate?: 'none' | 'sum';
     additive?: 'replace' | 'sum';
