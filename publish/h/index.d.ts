@@ -1,5 +1,5 @@
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from '../jsx';
-declare function h(tag?: string | [], props?: unknown, ...children: unknown[]): Element | Node | DocumentFragment | undefined;
+export declare function h(tag?: string | [], props?: unknown, ...children: unknown[]): Element | Node | DocumentFragment | undefined;
 declare namespace h {
     namespace JSX {
         type Element = HTMLElement;
@@ -27,7 +27,7 @@ declare namespace h {
     }
 }
 type Frag = { _startMark: Text }
-declare const api: {
+export const api: {
     ns: string;
     h: typeof h;
     svg: <T extends () => Element>(closure: T) => ReturnType<T>;
@@ -37,4 +37,3 @@ declare const api: {
     remove: (parent: Node, startNode: ChildNode | null, endMark: Node) => void;
     subscribe: (_: () => void) => void;
 };
-export { h, api };

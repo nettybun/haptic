@@ -1,7 +1,7 @@
-import { api } from './h';
+import { api as _api } from './h';
 import type { Subject } from './s';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
-declare function h(tag?: string | [], props?: unknown, ...children: unknown[]): Element | Node | DocumentFragment | undefined;
+export function h(tag?: string | [], props?: unknown, ...children: unknown[]): Element | Node | DocumentFragment | undefined;
 declare namespace h {
     namespace JSX {
         type MaybeSubject<T> = T | Subject<T>;
@@ -31,4 +31,5 @@ declare namespace h {
             & { [El in keyof SVGElements]: SVGAttributes<SVGElements[El]>; };
     }
 }
-export { h, api };
+// Swap out h to have the correct JSX namespace
+export const api: Omit<typeof _api, 'h'> & { h: typeof h };
