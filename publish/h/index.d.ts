@@ -1,7 +1,31 @@
-import type { JSXInternal } from '../jsx';
-// @ts-expect-error
-declare namespace _h { export import JSX = JSXInternal; }
+import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from 'sinueux/jsx';
 declare function _h(tag?: string | [], props?: unknown, ...children: unknown[]): Element | Node | DocumentFragment | undefined;
+declare namespace _h {
+    namespace JSX {
+        type Element = HTMLElement;
+        interface ElementAttributesProperty {
+            props: unknown;
+        }
+        interface ElementChildrenAttribute {
+            children: unknown;
+        }
+        interface IntrinsicAttributes {
+            children?: never;
+        }
+        type DOMAttributes<Target extends EventTarget>
+            = GenericEventAttrs<Target>
+            & { children?: unknown; };
+        type HTMLAttributes<Target extends EventTarget>
+            = HTMLAttrs
+            & DOMAttributes<Target>;
+        type SVGAttributes<Target extends EventTarget>
+            = SVGAttrs
+            & HTMLAttributes<Target>;
+        type IntrinsicElements =
+            & { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>; }
+            & { [El in keyof SVGElements]: SVGAttributes<SVGElements[El]>; };
+    }
+}
 type Frag = { _startMark: Text }
 declare const api: {
     ns: string;
