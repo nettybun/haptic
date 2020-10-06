@@ -22,7 +22,7 @@ declare type Update<T> = {
 declare function createSubject<T>(value: T): Subject<T>;
 declare function createComputedSubject<F extends Fn, T = ReturnType<F>>(fn: F): ComputedSubject<T>;
 declare function subscribe<F extends Fn>(fn: F): () => void;
-declare function unsubscribe<F extends Fn & { _update: Update<X>; }>(fn: F): void;
+declare function unsubscribe<F extends Fn & { update: Update<X>; }>(fn: F): void;
 declare function transaction(fn: Fn): unknown;
 declare function sample(fn: Fn): unknown;
 declare function on(subjects: Subject<X>[], fn: Fn, options?: { onlyChanges: boolean; }): ComputedSubject<unknown>;
