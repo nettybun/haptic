@@ -1,142 +1,205 @@
-// Vanilla JSX
+// This file contains building blocks to help construct a JSX namespace
+declare module 'sinueux/jsx' {
 
-// This includes only definitions for standard HTML and SVG elements. If you're
-// extending `h()` with an observer / observable implementation you'll likely
-// want them supported in JSX elements and attributes. JSX unfortunately uses
-// TypeScript namespaces which makes it very difficult to nicely extend base
-// definitions like this file.
-
-// Sinueux needs minimal edits to these declarations, and ~95% of the code
-// should be able to be shared. I've tried everything I know to make that work,
-// but can't seem to make TypeScript happy. Importers of this code can't change
-// types via declaration merging, only add new ones. They could provide new
-// interfaces that extend these interfaces, but TypeScript will only use them in
-// direct lookups, meaning IntrinsicElements will use the wrong interface for
-// HTMLAttributes/SVGAttributes.
-
-// I've also tried using generics but without success. If you manage to find a
-// solution please let me know!
-
-// Sadly I think the best option is to copy/paste these 900 lines of code into a
-// new file and make edits there.
-// TODO: Do this for Sinueux' h+s bundle if nothing ends up working for ESLint
-
-export namespace JSXInternal {
-  type Element = HTMLElement
-
-  interface ElementAttributesProperty {
-    props: unknown;
-  }
-
-  interface ElementChildrenAttribute {
-    children: unknown;
-  }
-
-  interface PathAttributes {
-    d: string;
-  }
-
-  type TargetedEvent<
-    Target extends EventTarget = EventTarget,
-    TypedEvent extends Event = Event
-  > = Omit<TypedEvent, 'currentTarget'> & {
-    readonly currentTarget: Target;
+  type HTMLElements = {
+    a: HTMLAnchorElement;
+    abbr: HTMLElement;
+    address: HTMLElement;
+    area: HTMLAreaElement;
+    article: HTMLElement;
+    aside: HTMLElement;
+    audio: HTMLAudioElement;
+    b: HTMLElement;
+    base: HTMLBaseElement;
+    bdi: HTMLElement;
+    bdo: HTMLElement;
+    big: HTMLElement;
+    blockquote: HTMLQuoteElement;
+    body: HTMLBodyElement;
+    br: HTMLBRElement;
+    button: HTMLButtonElement;
+    canvas: HTMLCanvasElement;
+    caption: HTMLTableCaptionElement;
+    cite: HTMLElement;
+    code: HTMLElement;
+    col: HTMLTableColElement;
+    colgroup: HTMLTableColElement;
+    data: HTMLDataElement;
+    datalist: HTMLDataListElement;
+    dd: HTMLElement;
+    del: HTMLModElement;
+    details: HTMLDetailsElement;
+    dfn: HTMLElement;
+    dialog: HTMLDialogElement;
+    div: HTMLDivElement;
+    dl: HTMLDListElement;
+    dt: HTMLElement;
+    em: HTMLElement;
+    embed: HTMLEmbedElement;
+    fieldset: HTMLFieldSetElement;
+    figcaption: HTMLElement;
+    figure: HTMLElement;
+    footer: HTMLElement;
+    form: HTMLFormElement;
+    h1: HTMLHeadingElement;
+    h2: HTMLHeadingElement;
+    h3: HTMLHeadingElement;
+    h4: HTMLHeadingElement;
+    h5: HTMLHeadingElement;
+    h6: HTMLHeadingElement;
+    head: HTMLHeadElement;
+    header: HTMLElement;
+    hgroup: HTMLElement;
+    hr: HTMLHRElement;
+    html: HTMLHtmlElement;
+    i: HTMLElement;
+    iframe: HTMLIFrameElement;
+    img: HTMLImageElement;
+    input: HTMLInputElement;
+    ins: HTMLModElement;
+    kbd: HTMLElement;
+    keygen: HTMLUnknownElement;
+    label: HTMLLabelElement;
+    legend: HTMLLegendElement;
+    li: HTMLLIElement;
+    link: HTMLLinkElement;
+    main: HTMLElement;
+    map: HTMLMapElement;
+    mark: HTMLElement;
+    menu: HTMLMenuElement;
+    menuitem: HTMLUnknownElement;
+    meta: HTMLMetaElement;
+    meter: HTMLMeterElement;
+    nav: HTMLElement;
+    noscript: HTMLElement;
+    object: HTMLObjectElement;
+    ol: HTMLOListElement;
+    optgroup: HTMLOptGroupElement;
+    option: HTMLOptionElement;
+    output: HTMLOutputElement;
+    p: HTMLParagraphElement;
+    param: HTMLParamElement;
+    picture: HTMLPictureElement;
+    pre: HTMLPreElement;
+    progress: HTMLProgressElement;
+    q: HTMLQuoteElement;
+    rp: HTMLElement;
+    rt: HTMLElement;
+    ruby: HTMLElement;
+    s: HTMLElement;
+    samp: HTMLElement;
+    script: HTMLScriptElement;
+    section: HTMLElement;
+    select: HTMLSelectElement;
+    slot: HTMLSlotElement;
+    small: HTMLElement;
+    source: HTMLSourceElement;
+    span: HTMLSpanElement;
+    strong: HTMLElement;
+    style: HTMLStyleElement;
+    sub: HTMLElement;
+    summary: HTMLElement;
+    sup: HTMLElement;
+    table: HTMLTableElement;
+    tbody: HTMLTableSectionElement;
+    td: HTMLTableCellElement;
+    textarea: HTMLTextAreaElement;
+    tfoot: HTMLTableSectionElement;
+    th: HTMLTableCellElement;
+    thead: HTMLTableSectionElement;
+    time: HTMLTimeElement;
+    title: HTMLTitleElement;
+    tr: HTMLTableRowElement;
+    track: HTMLTrackElement;
+    u: HTMLElement;
+    ul: HTMLUListElement;
+    var: HTMLElement;
+    video: HTMLVideoElement;
+    wbr: HTMLElement;
   };
 
-  type TargetedAnimationEvent<Target extends EventTarget> = TargetedEvent<
-    Target,
-    AnimationEvent
-  >;
-  type TargetedClipboardEvent<Target extends EventTarget> = TargetedEvent<
-    Target,
-    ClipboardEvent
-  >;
-  type TargetedCompositionEvent<Target extends EventTarget> = TargetedEvent<
-    Target,
-    CompositionEvent
-  >;
-  type TargetedDragEvent<Target extends EventTarget> = TargetedEvent<
-    Target,
-    DragEvent
-  >;
-  type TargetedFocusEvent<Target extends EventTarget> = TargetedEvent<
-    Target,
-    FocusEvent
-  >;
-  type TargetedKeyboardEvent<Target extends EventTarget> = TargetedEvent<
-    Target,
-    KeyboardEvent
-  >;
-  type TargetedMouseEvent<Target extends EventTarget> = TargetedEvent<
-    Target,
-    MouseEvent
-  >;
-  type TargetedPointerEvent<Target extends EventTarget> = TargetedEvent<
-    Target,
-    PointerEvent
-  >;
-  type TargetedTouchEvent<Target extends EventTarget> = TargetedEvent<
-    Target,
-    TouchEvent
-  >;
-  type TargetedTransitionEvent<Target extends EventTarget> = TargetedEvent<
-    Target,
-    TransitionEvent
-  >;
-  type TargetedUIEvent<Target extends EventTarget> = TargetedEvent<
-    Target,
-    UIEvent
-  >;
-  type TargetedWheelEvent<Target extends EventTarget> = TargetedEvent<
-    Target,
-    WheelEvent
-  >;
+  type SVGElements = {
+    svg: SVGSVGElement;
+    animate: SVGAnimateElement;
+    circle: SVGCircleElement;
+    clipPath: SVGClipPathElement;
+    defs: SVGDefsElement;
+    desc: SVGDescElement;
+    ellipse: SVGEllipseElement;
+    feBlend: SVGFEBlendElement;
+    feColorMatrix: SVGFEColorMatrixElement;
+    feComponentTransfer: SVGFEComponentTransferElement;
+    feComposite: SVGFECompositeElement;
+    feConvolveMatrix: SVGFEConvolveMatrixElement;
+    feDiffuseLighting: SVGFEDiffuseLightingElement;
+    feDisplacementMap: SVGFEDisplacementMapElement;
+    feFlood: SVGFEFloodElement;
+    feGaussianBlur: SVGFEGaussianBlurElement;
+    feImage: SVGFEImageElement;
+    feMerge: SVGFEMergeElement;
+    feMergeNode: SVGFEMergeNodeElement;
+    feMorphology: SVGFEMorphologyElement;
+    feOffset: SVGFEOffsetElement;
+    feSpecularLighting: SVGFESpecularLightingElement;
+    feTile: SVGFETileElement;
+    feTurbulence: SVGFETurbulenceElement;
+    filter: SVGFilterElement;
+    foreignObject: SVGForeignObjectElement;
+    g: SVGGElement;
+    image: SVGImageElement;
+    line: SVGLineElement;
+    linearGradient: SVGLinearGradientElement;
+    marker: SVGMarkerElement;
+    mask: SVGMaskElement;
+    path: SVGPathElement;
+    pattern: SVGPatternElement;
+    polygon: SVGPolygonElement;
+    polyline: SVGPolylineElement;
+    radialGradient: SVGRadialGradientElement;
+    rect: SVGRectElement;
+    stop: SVGStopElement;
+    symbol: SVGSymbolElement;
+    text: SVGTextElement;
+    tspan: SVGTSpanElement;
+    use: SVGUseElement;
+  };
 
-  interface EventHandler<E extends TargetedEvent> {
-    (event: E): void;
-  }
+  type TargetedEvent
+    <Target extends EventTarget = EventTarget, TypedEvent extends Event = Event>
+    = Omit<TypedEvent, 'currentTarget'>
+      & { readonly currentTarget: Target; };
 
-  type AnimationEventHandler<Target extends EventTarget> = EventHandler<
-    TargetedAnimationEvent<Target>
-  >;
-  type ClipboardEventHandler<Target extends EventTarget> = EventHandler<
-    TargetedClipboardEvent<Target>
-  >;
-  type CompositionEventHandler<Target extends EventTarget> = EventHandler<
-    TargetedCompositionEvent<Target>
-  >;
-  type DragEventHandler<Target extends EventTarget> = EventHandler<
-    TargetedDragEvent<Target>
-  >;
-  type FocusEventHandler<Target extends EventTarget> = EventHandler<
-    TargetedFocusEvent<Target>
-  >;
-  type GenericEventHandler<Target extends EventTarget> = EventHandler<
-    TargetedEvent<Target>
-  >;
-  type KeyboardEventHandler<Target extends EventTarget> = EventHandler<
-    TargetedKeyboardEvent<Target>
-  >;
-  type MouseEventHandler<Target extends EventTarget> = EventHandler<
-    TargetedMouseEvent<Target>
-  >;
-  type PointerEventHandler<Target extends EventTarget> = EventHandler<
-    TargetedPointerEvent<Target>
-  >;
-  type TouchEventHandler<Target extends EventTarget> = EventHandler<
-    TargetedTouchEvent<Target>
-  >;
-  type TransitionEventHandler<Target extends EventTarget> = EventHandler<
-    TargetedTransitionEvent<Target>
-  >;
-  type UIEventHandler<Target extends EventTarget> = EventHandler<
-    TargetedUIEvent<Target>
-  >;
-  type WheelEventHandler<Target extends EventTarget> = EventHandler<
-    TargetedWheelEvent<Target>
-  >;
+  type EventHandler <E extends TargetedEvent> = { (event: E): void; }
 
-  interface DOMAttributes<Target extends EventTarget> {
+  type AnimationEventHandler
+    <Target extends EventTarget> = EventHandler<TargetedEvent<Target, AnimationEvent>>;
+  type ClipboardEventHandler
+    <Target extends EventTarget> = EventHandler<TargetedEvent<Target, ClipboardEvent>>;
+  type CompositionEventHandler
+    <Target extends EventTarget> = EventHandler<TargetedEvent<Target, CompositionEvent>>;
+  type DragEventHandler
+    <Target extends EventTarget> = EventHandler<TargetedEvent<Target, DragEvent>>;
+  type FocusEventHandler
+    <Target extends EventTarget> = EventHandler<TargetedEvent<Target, FocusEvent>>;
+  type GenericEventHandler
+    <Target extends EventTarget> = EventHandler<TargetedEvent<Target>>;
+  type KeyboardEventHandler
+    <Target extends EventTarget> = EventHandler<TargetedEvent<Target, KeyboardEvent>>;
+  type MouseEventHandler
+    <Target extends EventTarget> = EventHandler<TargetedEvent<Target, MouseEvent>>;
+  type PointerEventHandler
+    <Target extends EventTarget> = EventHandler<TargetedEvent<Target, PointerEvent>>;
+  type TouchEventHandler
+    <Target extends EventTarget> = EventHandler<TargetedEvent<Target, TouchEvent>>;
+  type TransitionEventHandler
+    <Target extends EventTarget> = EventHandler<TargetedEvent<Target, TransitionEvent>>;
+  type UIEventHandler
+    <Target extends EventTarget> = EventHandler<TargetedEvent<Target, UIEvent>>;
+  type WheelEventHandler
+    <Target extends EventTarget> = EventHandler<TargetedEvent<Target, WheelEvent>>;
+
+  // Receives an element as Target such as HTMLDivElement
+  type GenericEventAttributes<Target extends EventTarget> = {
     // Image Events
     onLoad?: GenericEventHandler<Target>;
     onLoadCapture?: GenericEventHandler<Target>;
@@ -327,10 +390,10 @@ export namespace JSXInternal {
     // Transition Events
     onTransitionEnd?: TransitionEventHandler<Target>;
     onTransitionEndCapture?: TransitionEventHandler<Target>;
-  }
+  };
 
-  interface HTMLAttributes<RefType extends EventTarget = EventTarget>
-    extends DOMAttributes<RefType> {
+  // Note: HTML elements will also need GenericEventAttributes
+  type HTMLAttributes = {
     // Standard HTML Attributes
     accept?: string;
     acceptCharset?: string;
@@ -481,10 +544,10 @@ export namespace JSXInternal {
     itemType?: string;
     itemID?: string;
     itemRef?: string;
-  }
+  };
 
-  interface SVGAttributes<Target extends EventTarget = SVGElement>
-    extends HTMLAttributes<Target> {
+  // Note: SVG elements will also need HTMLAttributes and GenericEventAttributes
+  type SVGAttributes = {
     accentHeight?: number | string;
     accumulate?: 'none' | 'sum';
     additive?: 'replace' | 'sum';
@@ -737,168 +800,5 @@ export namespace JSXInternal {
     yChannelSelector?: string;
     z?: number | string;
     zoomAndPan?: string;
-  }
-
-  interface IntrinsicElements {
-    // HTML
-    a: HTMLAttributes<HTMLAnchorElement>;
-    abbr: HTMLAttributes<HTMLElement>;
-    address: HTMLAttributes<HTMLElement>;
-    area: HTMLAttributes<HTMLAreaElement>;
-    article: HTMLAttributes<HTMLElement>;
-    aside: HTMLAttributes<HTMLElement>;
-    audio: HTMLAttributes<HTMLAudioElement>;
-    b: HTMLAttributes<HTMLElement>;
-    base: HTMLAttributes<HTMLBaseElement>;
-    bdi: HTMLAttributes<HTMLElement>;
-    bdo: HTMLAttributes<HTMLElement>;
-    big: HTMLAttributes<HTMLElement>;
-    blockquote: HTMLAttributes<HTMLQuoteElement>;
-    body: HTMLAttributes<HTMLBodyElement>;
-    br: HTMLAttributes<HTMLBRElement>;
-    button: HTMLAttributes<HTMLButtonElement>;
-    canvas: HTMLAttributes<HTMLCanvasElement>;
-    caption: HTMLAttributes<HTMLTableCaptionElement>;
-    cite: HTMLAttributes<HTMLElement>;
-    code: HTMLAttributes<HTMLElement>;
-    col: HTMLAttributes<HTMLTableColElement>;
-    colgroup: HTMLAttributes<HTMLTableColElement>;
-    data: HTMLAttributes<HTMLDataElement>;
-    datalist: HTMLAttributes<HTMLDataListElement>;
-    dd: HTMLAttributes<HTMLElement>;
-    del: HTMLAttributes<HTMLModElement>;
-    details: HTMLAttributes<HTMLDetailsElement>;
-    dfn: HTMLAttributes<HTMLElement>;
-    dialog: HTMLAttributes<HTMLDialogElement>;
-    div: HTMLAttributes<HTMLDivElement>;
-    dl: HTMLAttributes<HTMLDListElement>;
-    dt: HTMLAttributes<HTMLElement>;
-    em: HTMLAttributes<HTMLElement>;
-    embed: HTMLAttributes<HTMLEmbedElement>;
-    fieldset: HTMLAttributes<HTMLFieldSetElement>;
-    figcaption: HTMLAttributes<HTMLElement>;
-    figure: HTMLAttributes<HTMLElement>;
-    footer: HTMLAttributes<HTMLElement>;
-    form: HTMLAttributes<HTMLFormElement>;
-    h1: HTMLAttributes<HTMLHeadingElement>;
-    h2: HTMLAttributes<HTMLHeadingElement>;
-    h3: HTMLAttributes<HTMLHeadingElement>;
-    h4: HTMLAttributes<HTMLHeadingElement>;
-    h5: HTMLAttributes<HTMLHeadingElement>;
-    h6: HTMLAttributes<HTMLHeadingElement>;
-    head: HTMLAttributes<HTMLHeadElement>;
-    header: HTMLAttributes<HTMLElement>;
-    hgroup: HTMLAttributes<HTMLElement>;
-    hr: HTMLAttributes<HTMLHRElement>;
-    html: HTMLAttributes<HTMLHtmlElement>;
-    i: HTMLAttributes<HTMLElement>;
-    iframe: HTMLAttributes<HTMLIFrameElement>;
-    img: HTMLAttributes<HTMLImageElement>;
-    input: HTMLAttributes<HTMLInputElement>;
-    ins: HTMLAttributes<HTMLModElement>;
-    kbd: HTMLAttributes<HTMLElement>;
-    keygen: HTMLAttributes<HTMLUnknownElement>;
-    label: HTMLAttributes<HTMLLabelElement>;
-    legend: HTMLAttributes<HTMLLegendElement>;
-    li: HTMLAttributes<HTMLLIElement>;
-    link: HTMLAttributes<HTMLLinkElement>;
-    main: HTMLAttributes<HTMLElement>;
-    map: HTMLAttributes<HTMLMapElement>;
-    mark: HTMLAttributes<HTMLElement>;
-    menu: HTMLAttributes<HTMLMenuElement>;
-    menuitem: HTMLAttributes<HTMLUnknownElement>;
-    meta: HTMLAttributes<HTMLMetaElement>;
-    meter: HTMLAttributes<HTMLMeterElement>;
-    nav: HTMLAttributes<HTMLElement>;
-    noscript: HTMLAttributes<HTMLElement>;
-    object: HTMLAttributes<HTMLObjectElement>;
-    ol: HTMLAttributes<HTMLOListElement>;
-    optgroup: HTMLAttributes<HTMLOptGroupElement>;
-    option: HTMLAttributes<HTMLOptionElement>;
-    output: HTMLAttributes<HTMLOutputElement>;
-    p: HTMLAttributes<HTMLParagraphElement>;
-    param: HTMLAttributes<HTMLParamElement>;
-    picture: HTMLAttributes<HTMLPictureElement>;
-    pre: HTMLAttributes<HTMLPreElement>;
-    progress: HTMLAttributes<HTMLProgressElement>;
-    q: HTMLAttributes<HTMLQuoteElement>;
-    rp: HTMLAttributes<HTMLElement>;
-    rt: HTMLAttributes<HTMLElement>;
-    ruby: HTMLAttributes<HTMLElement>;
-    s: HTMLAttributes<HTMLElement>;
-    samp: HTMLAttributes<HTMLElement>;
-    script: HTMLAttributes<HTMLScriptElement>;
-    section: HTMLAttributes<HTMLElement>;
-    select: HTMLAttributes<HTMLSelectElement>;
-    slot: HTMLAttributes<HTMLSlotElement>;
-    small: HTMLAttributes<HTMLElement>;
-    source: HTMLAttributes<HTMLSourceElement>;
-    span: HTMLAttributes<HTMLSpanElement>;
-    strong: HTMLAttributes<HTMLElement>;
-    style: HTMLAttributes<HTMLStyleElement>;
-    sub: HTMLAttributes<HTMLElement>;
-    summary: HTMLAttributes<HTMLElement>;
-    sup: HTMLAttributes<HTMLElement>;
-    table: HTMLAttributes<HTMLTableElement>;
-    tbody: HTMLAttributes<HTMLTableSectionElement>;
-    td: HTMLAttributes<HTMLTableCellElement>;
-    textarea: HTMLAttributes<HTMLTextAreaElement>;
-    tfoot: HTMLAttributes<HTMLTableSectionElement>;
-    th: HTMLAttributes<HTMLTableCellElement>;
-    thead: HTMLAttributes<HTMLTableSectionElement>;
-    time: HTMLAttributes<HTMLTimeElement>;
-    title: HTMLAttributes<HTMLTitleElement>;
-    tr: HTMLAttributes<HTMLTableRowElement>;
-    track: HTMLAttributes<HTMLTrackElement>;
-    u: HTMLAttributes<HTMLElement>;
-    ul: HTMLAttributes<HTMLUListElement>;
-    var: HTMLAttributes<HTMLElement>;
-    video: HTMLAttributes<HTMLVideoElement>;
-    wbr: HTMLAttributes<HTMLElement>;
-
-    //SVG
-    svg: SVGAttributes<SVGSVGElement>;
-    animate: SVGAttributes<SVGAnimateElement>;
-    circle: SVGAttributes<SVGCircleElement>;
-    clipPath: SVGAttributes<SVGClipPathElement>;
-    defs: SVGAttributes<SVGDefsElement>;
-    desc: SVGAttributes<SVGDescElement>;
-    ellipse: SVGAttributes<SVGEllipseElement>;
-    feBlend: SVGAttributes<SVGFEBlendElement>;
-    feColorMatrix: SVGAttributes<SVGFEColorMatrixElement>;
-    feComponentTransfer: SVGAttributes<SVGFEComponentTransferElement>;
-    feComposite: SVGAttributes<SVGFECompositeElement>;
-    feConvolveMatrix: SVGAttributes<SVGFEConvolveMatrixElement>;
-    feDiffuseLighting: SVGAttributes<SVGFEDiffuseLightingElement>;
-    feDisplacementMap: SVGAttributes<SVGFEDisplacementMapElement>;
-    feFlood: SVGAttributes<SVGFEFloodElement>;
-    feGaussianBlur: SVGAttributes<SVGFEGaussianBlurElement>;
-    feImage: SVGAttributes<SVGFEImageElement>;
-    feMerge: SVGAttributes<SVGFEMergeElement>;
-    feMergeNode: SVGAttributes<SVGFEMergeNodeElement>;
-    feMorphology: SVGAttributes<SVGFEMorphologyElement>;
-    feOffset: SVGAttributes<SVGFEOffsetElement>;
-    feSpecularLighting: SVGAttributes<SVGFESpecularLightingElement>;
-    feTile: SVGAttributes<SVGFETileElement>;
-    feTurbulence: SVGAttributes<SVGFETurbulenceElement>;
-    filter: SVGAttributes<SVGFilterElement>;
-    foreignObject: SVGAttributes<SVGForeignObjectElement>;
-    g: SVGAttributes<SVGGElement>;
-    image: SVGAttributes<SVGImageElement>;
-    line: SVGAttributes<SVGLineElement>;
-    linearGradient: SVGAttributes<SVGLinearGradientElement>;
-    marker: SVGAttributes<SVGMarkerElement>;
-    mask: SVGAttributes<SVGMaskElement>;
-    path: SVGAttributes<SVGPathElement>;
-    pattern: SVGAttributes<SVGPatternElement>;
-    polygon: SVGAttributes<SVGPolygonElement>;
-    polyline: SVGAttributes<SVGPolylineElement>;
-    radialGradient: SVGAttributes<SVGRadialGradientElement>;
-    rect: SVGAttributes<SVGRectElement>;
-    stop: SVGAttributes<SVGStopElement>;
-    symbol: SVGAttributes<SVGSymbolElement>;
-    text: SVGAttributes<SVGTextElement>;
-    tspan: SVGAttributes<SVGTSpanElement>;
-    use: SVGAttributes<SVGUseElement>;
-  }
+  };
 }
