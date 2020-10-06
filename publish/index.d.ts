@@ -1,7 +1,7 @@
-import { h, api } from './h';
+import { api } from './h';
 import type { Subject } from './s';
-import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from 'sinueux/jsx';
-export { h, api };
+import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
+declare function h(tag?: string | [], props?: unknown, ...children: unknown[]): Element | Node | DocumentFragment | undefined;
 declare namespace h {
     namespace JSX {
         type MaybeSubject<T> = T | Subject<T>;
@@ -31,3 +31,4 @@ declare namespace h {
             & { [El in keyof SVGElements]: SVGAttributes<SVGElements[El]>; };
     }
 }
+export { h, api };
