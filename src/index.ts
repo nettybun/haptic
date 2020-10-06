@@ -54,6 +54,6 @@ declare namespace h {
 
     type IntrinsicElements =
       & { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>; }
-      & { [El in keyof SVGElements]: SVGAttributes<SVGElements[El]>; }
+      & { [El in keyof SVGElements]: SVGAttributes<SVGElements[El]>; };
   }
 }
