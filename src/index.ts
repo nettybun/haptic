@@ -1,15 +1,13 @@
-// This bundle uses sinueux/s as the observer implementation. The TS aliases are
-// used to mark it as an external dependency in esbuild, allowing downstream
-// codebases to write:
+// This bundle uses sinueux/s as the observer implementation. Developers using
+// the library can load both h and s by writing:
 
 // import { h } from 'sinueux';
 // import { s, computed } from 'sinueux/s';
-// ...
 
-// Note that developers don't import sinueux/h since it doesn't have extended
-// JSX definitions (below) that use sinueux/s. Bundlers will include sinuous/s
-// only once since this bundle references it rather than embedding. This also
-// caches well for unbundled (ESM-only) development (Snowpack, etc)
+// Since the sinueux package doesn't embed sinueux/s, code will only be loaded
+// once despite having two import sites. This should work well for both bundlers
+// and unbundled (ESM-only; Snowpack/UNPKG) workflows. Note that if sinueux/h
+// was imported instead, the JSX definitions wouldn't support sinueux/s
 
 import { subscribe } from './s';
 import { h, api } from './h';
