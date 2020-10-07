@@ -11,10 +11,10 @@
 // only once since this bundle references it rather than embedding. This also
 // caches well for unbundled (ESM-only) development (Snowpack, etc)
 
-import { subscribe } from 'sinueux/s';
-import { h, api } from 'sinueux/h';
+import { subscribe } from './s';
+import { h, api } from './h';
 
-import type { Subject } from 'sinueux/s';
+import type { Subject } from './s';
 import type {
   GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements
 } from './jsx';
