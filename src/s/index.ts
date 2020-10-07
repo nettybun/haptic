@@ -1,16 +1,17 @@
-// Observer pattern
-// https://en.wikipedia.org/wiki/Observer_pattern
+// Signal
 
-// This implementation uses Subjects, Observers, and Updates following naming
-// conventions of the architecture. Subjects maintain a list of Update functions
-// for their Observers. Note that an Observer's only method is its Update call.
-// These functions maintain a list of Subjects they depend on and a list of any
-// nested Update calls that take part in their recalculation.
+// This implements the Observer Pattern architecture where subjects maintain a
+// list of update methods of their observers. This code is forked from Sinuous
+// which describe subjects as "Observables" despite the term already being used
+// in the JS ecosystem to refer to stream-focused architectures. To avoid
+// confusion this uses "Signal" instead, which comes from the Solid framework.
 
-// This API exports two types of subjects. Subject<T> is read-write and updates
-// only when written directly. ComputedSubject<T> is read-only and updates
-// automatically when any of its defining Subjects or ComputedSubjects change.
-// An Update function exists for each ComputedSubject.
+// This API exports two types of signals. Signal<T> is read-write and updates
+// only when written directly. ComputedSignal<T> is read-only and updates
+// automatically when any of its defining Signals or ComputedSignals change.
+
+// An update method exists for each ComputedSignal. It holds a list of Signals
+// it depends on, and a list of any nested update methods from ComputedSignals.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -22,35 +23,35 @@ type Base<T> = {
   $o: 1
 }
 
-type Subject<T> = Base<T> & {
+type Signal<T> = Base<T> & {
   (nextValue: T): T
   observers: Set<Update<X>>
   observersRan: Set<Update<X>> | undefined
   pending: T | []
 }
 
-type ComputedSubject<T> = Base<T> & {
+type ComputedSignal<T> = Base<T> & {
   update: Update<T>
 }
 
 type Update<T> = {
   (): T
   stale: boolean
-  subjects: Subject<X>[]
+  signals: Signal<X>[]
   children: Update<X>[]
 }
 
 const EMPTY_ARR: [] = [];
 
 let runningUpdateFn: Update<X> | undefined;
-let transactionQueue: Subject<X>[] | undefined;
+let transactionQueue: Signal<X>[] | undefined;
 
-function createSubject<T>(value: T): Subject<T> {
-  const subject: Subject<T> = (...args: T[]) => {
+function createSignal<T>(value: T): Signal<T> {
+  const signal: Signal<T> = (...args: T[]) => {
     if (!args.length) {
-      if (runningUpdateFn && !subject.observers.has(runningUpdateFn)) {
-        subject.observers.add(runningUpdateFn);
-        runningUpdateFn.subjects.push(subject);
+      if (runningUpdateFn && !signal.observers.has(runningUpdateFn)) {
+        signal.observers.add(runningUpdateFn);
+        runningUpdateFn.signals.push(signal);
       }
       return value;
     }
@@ -58,10 +59,10 @@ function createSubject<T>(value: T): Subject<T> {
     const [nextValue] = args;
 
     if (transactionQueue) {
-      if (subject.pending === EMPTY_ARR) {
-        transactionQueue.push(subject);
+      if (signal.pending === EMPTY_ARR) {
+        transactionQueue.push(signal);
       }
-      subject.pending = nextValue;
+      signal.pending = nextValue;
       return nextValue;
     }
 
@@ -72,25 +73,25 @@ function createSubject<T>(value: T): Subject<T> {
     const prevUpdateFn = runningUpdateFn;
     runningUpdateFn = undefined;
 
-    // Update can alter subject.observers so make a copy before running
-    subject.observersRan = new Set(subject.observers);
-    subject.observersRan.forEach(c => { c.stale = true; });
-    subject.observersRan.forEach(c => { if (c.stale) c(); });
+    // Update can alter signal.observers so make a copy before running
+    signal.observersRan = new Set(signal.observers);
+    signal.observersRan.forEach(c => { c.stale = true; });
+    signal.observersRan.forEach(c => { if (c.stale) c(); });
 
     runningUpdateFn = prevUpdateFn;
     return value;
   };
   // Used in h/nodeProperty.ts
-  subject.$o = 1 as const;
-  subject.observers = new Set<Update<X>>();
-  subject.observersRan = undefined;
+  signal.$o = 1 as const;
+  signal.observers = new Set<Update<X>>();
+  signal.observersRan = undefined;
   // The 'not set' value must be unique so `nullish` can be set in a transaction
-  subject.pending = EMPTY_ARR;
+  signal.pending = EMPTY_ARR;
 
-  return subject;
+  return signal;
 }
 
-function createComputedSubject<F extends Fn, T = ReturnType<F>>(fn: F): ComputedSubject<T> {
+function createComputedSignal<F extends Fn, T = ReturnType<F>>(fn: F): ComputedSignal<T> {
   let value: T;
   const update: Update<T> = () => {
     const prevUpdateFn = runningUpdateFn;
@@ -118,12 +119,12 @@ function createComputedSubject<F extends Fn, T = ReturnType<F>>(fn: F): Computed
         (acc, curr) => acc.concat(curr, getChildrenDeep(curr.children)),
         [] as Update<X>[]
       );
-    // If any listeners were marked as fresh remove their subjects from the run lists
+    // If any listeners were marked as fresh remove their signals from the run lists
     const allChildren = getChildrenDeep(update.children);
     allChildren.forEach(child => {
       if (!child.stale) {
-        child.subjects.forEach(subject => {
-          subject.observersRan && subject.observersRan.delete(child);
+        child.signals.forEach(signal => {
+          signal.observersRan && signal.observersRan.delete(child);
         });
       }
     });
@@ -131,20 +132,20 @@ function createComputedSubject<F extends Fn, T = ReturnType<F>>(fn: F): Computed
     return value;
   };
   update.stale = true;
-  update.subjects = [];
+  update.signals = [];
   update.children = [];
 
-  const computedSubject: ComputedSubject<T> = () => {
+  const computedSignal: ComputedSignal<T> = () => {
     if (!update.stale) {
-      update.subjects.forEach(subject => { subject(); });
+      update.signals.forEach(signal => { signal(); });
     } else {
       value = update();
     }
     return value;
   };
   // Used in h/nodeProperty.ts
-  computedSubject.$o = 1 as const;
-  computedSubject.update = update;
+  computedSignal.$o = 1 as const;
+  computedSignal.update = update;
   (fn as F & { update: Update<X> }).update = update;
 
   // eslint-disable-next-line eqeqeq
@@ -155,11 +156,11 @@ function createComputedSubject<F extends Fn, T = ReturnType<F>>(fn: F): Computed
   resetUpdate(update);
   update();
 
-  return computedSubject;
+  return computedSignal;
 }
 
 function subscribe<F extends Fn>(fn: F) {
-  createComputedSubject(fn);
+  createComputedSignal(fn);
   return () => unsubscribe(fn as F & { update: Update<X> });
 }
 
@@ -170,17 +171,17 @@ function unsubscribe<F extends Fn & { update: Update<X> }>(fn: F) {
 function removeConnections(update: Update<X>) {
   update.children.forEach(removeConnections);
 
-  update.subjects.forEach(subject => {
-    subject.observers.delete(update);
-    subject.observersRan && subject.observersRan.delete(update);
+  update.signals.forEach(signal => {
+    signal.observers.delete(update);
+    signal.observersRan && signal.observersRan.delete(update);
   });
 
   resetUpdate(update);
 }
 
 function resetUpdate(update: Update<X>) {
-  // Keep track of which subjects trigger updates. Needed for unsubscribe.
-  update.subjects = [];
+  // Keep track of which signals trigger updates. Needed for unsubscribe.
+  update.signals = [];
   update.children = [];
 }
 
@@ -188,9 +189,9 @@ function transaction<T>(fn: () => T): T {
   const prevQueue = transactionQueue;
   transactionQueue = [];
   const value = fn();
-  const subjects = transactionQueue;
+  const signals = transactionQueue;
   transactionQueue = prevQueue;
-  subjects.forEach(s => {
+  signals.forEach(s => {
     if (s.pending !== EMPTY_ARR) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { pending } = s;
@@ -209,10 +210,10 @@ function sample<T>(fn: () => T): T {
   return value;
 }
 
-function on(subjects: Subject<X>[], fn: Fn, options = { onlyChanges: true }) {
-  subjects = ([] as Subject<X>[]).concat(subjects);
-  return createComputedSubject(() => {
-    subjects.forEach(subject => { subject(); });
+function on(signals: Signal<X>[], fn: Fn, options = { onlyChanges: true }) {
+  signals = ([] as Signal<X>[]).concat(signals);
+  return createComputedSignal(() => {
+    signals.forEach(signal => { signal(); });
     let value;
     if (!options.onlyChanges) value = sample(fn);
     options.onlyChanges = false;
@@ -221,12 +222,12 @@ function on(subjects: Subject<X>[], fn: Fn, options = { onlyChanges: true }) {
 }
 
 // Types
-export { Subject, ComputedSubject, Update };
+export { Signal, ComputedSignal, Update };
 
 export {
-  createSubject as s,
-  createSubject as subject,
-  createComputedSubject as computed,
+  createSignal as s,
+  createSignal as signal,
+  createComputedSignal as computed,
   subscribe,
   unsubscribe,
   transaction,

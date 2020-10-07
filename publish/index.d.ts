@@ -1,11 +1,11 @@
 import { api as _api } from './h';
-import type { Subject } from './s';
+import type { Signal } from './s';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 export function h(tag?: string | [], props?: unknown, ...children: unknown[]): Element | Node | DocumentFragment | undefined;
 declare namespace h {
     namespace JSX {
-        type MaybeSubject<T> = T | Subject<T>;
-        type AllowSubject<Props> = { [K in keyof Props]: MaybeSubject<Props[K]>; };
+        type MaybeSignal<T> = T | Signal<T>;
+        type AllowSignal<Props> = { [K in keyof Props]: MaybeSignal<Props[K]>; };
         type Element = HTMLElement;
         interface ElementAttributesProperty {
             props: unknown;
@@ -17,14 +17,14 @@ declare namespace h {
             children?: never;
         }
         type DOMAttributes<Target extends EventTarget>
-            = AllowSubject<GenericEventAttrs<Target>>
+            = AllowSignal<GenericEventAttrs<Target>>
             & { children?: unknown; };
         type HTMLAttributes<Target extends EventTarget>
-            = AllowSubject<Omit<HTMLAttrs, 'style'>>
-            & { style?: MaybeSubject<string> | { [key: string]: MaybeSubject<string | number>; }; }
+            = AllowSignal<Omit<HTMLAttrs, 'style'>>
+            & { style?: MaybeSignal<string> | { [key: string]: MaybeSignal<string | number>; }; }
             & DOMAttributes<Target>;
         type SVGAttributes<Target extends EventTarget>
-            = AllowSubject<SVGAttrs>
+            = AllowSignal<SVGAttrs>
             & HTMLAttributes<Target>;
         type IntrinsicElements =
             & { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>; }

@@ -12,7 +12,7 @@
 import { subscribe } from './s';
 import { h, api } from './h';
 
-import type { Subject } from './s';
+import type { Signal } from './s';
 import type {
   GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements
 } from './jsx';
@@ -23,8 +23,8 @@ export { h, api };
 
 declare namespace h {
   export namespace JSX {
-    type MaybeSubject<T> = T | Subject<T>;
-    type AllowSubject<Props> = { [K in keyof Props]: MaybeSubject<Props[K]> };
+    type MaybeSignal<T> = T | Signal<T>;
+    type AllowSignal<Props> = { [K in keyof Props]: MaybeSignal<Props[K]> };
 
     type Element = HTMLElement;
 
@@ -37,18 +37,18 @@ declare namespace h {
     // Allow children on all DOM elements (not components, see above)
     // ESLint will error for children on void elements like <img/>
     type DOMAttributes<Target extends EventTarget>
-      = AllowSubject<GenericEventAttrs<Target>> & { children?: unknown };
+      = AllowSignal<GenericEventAttrs<Target>> & { children?: unknown };
 
     type HTMLAttributes<Target extends EventTarget>
-      = AllowSubject<Omit<HTMLAttrs, 'style'>>
+      = AllowSignal<Omit<HTMLAttrs, 'style'>>
         & { style?:
-            | MaybeSubject<string>
-            | { [key: string]: MaybeSubject<string | number> };
+            | MaybeSignal<string>
+            | { [key: string]: MaybeSignal<string | number> };
           }
         & DOMAttributes<Target>;
 
     type SVGAttributes<Target extends EventTarget>
-      = AllowSubject<SVGAttrs> & HTMLAttributes<Target>;
+      = AllowSignal<SVGAttrs> & HTMLAttributes<Target>;
 
     type IntrinsicElements =
       & { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>; }
