@@ -184,7 +184,7 @@ function resetUpdate(update: Update<X>) {
   update.children = [];
 }
 
-function transaction(fn: Fn) {
+function transaction<T>(fn: () => T): T {
   const prevQueue = transactionQueue;
   transactionQueue = [];
   const value = fn();
@@ -201,7 +201,7 @@ function transaction(fn: Fn) {
   return value;
 }
 
-function sample(fn: Fn) {
+function sample<T>(fn: () => T): T {
   const prevUpdateFn = runningUpdateFn;
   runningUpdateFn = undefined;
   const value = fn();
