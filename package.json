@@ -12,11 +12,10 @@
     "url": "https://gitlab.com/nthm/sinueux"
   },
   "scripts": {
-    "build": "npm run build:h && npm run build:s && npm run build:index:esm && npm run build:index:min",
+    "build": "npm run build:h && npm run build:s && npm run build:index",
     "build:h": "esbuild --bundle src/h/index.ts --outfile=publish/h/index.js --format=esm --minify --sourcemap",
     "build:s": "esbuild --bundle src/s/index.ts --outfile=publish/s/index.js --format=esm --minify --sourcemap",
-    "build:index:esm": "esbuild src/index.ts --outfile=publish/index.js --format=esm --minify --sourcemap",
-    "build:index:min": "esbuild src/index.ts --bundle --outfile=publish/index.min.js --format=iife --minify --sourcemap"
+    "build:index": "esbuild src/index.ts --outfile=publish/index.js --format=esm --minify --sourcemap"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.3.0",
