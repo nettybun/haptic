@@ -10,7 +10,7 @@
   "overrides": [
     {
       "files": [
-        "src/**/*.ts"
+        "**/*.{ts,tsx}"
       ],
       "extends": [
         "plugin:@typescript-eslint/recommended",
@@ -18,36 +18,6 @@
       ],
       "rules": {
         "@typescript-eslint/ban-ts-comment": "off",
-        "@typescript-eslint/ban-types": [
-          "error",
-          {
-            "types": {
-              "String": {
-                "message": "Use string instead",
-                "fixWith": "string"
-              },
-              "Boolean": {
-                "message": "Use boolean instead",
-                "fixWith": "boolean"
-              },
-              "Number": {
-                "message": "Use number instead",
-                "fixWith": "number"
-              },
-              "Symbol": {
-                "message": "Use symbol instead",
-                "fixWith": "symbol"
-              },
-              "Function": {
-                "message": "Accepts any function-like value.\nIt provides no type safety"
-              },
-              "Object": {
-                "message": "Actually means \"any non-nullish value\""
-              }
-            },
-            "extendDefaults": false
-          }
-        ],
         "@typescript-eslint/explicit-function-return-type": "off",
         "@typescript-eslint/explicit-module-boundary-types": "off",
         "@typescript-eslint/no-empty-function": "off",
@@ -65,17 +35,19 @@
           }
         ],
         "@typescript-eslint/no-namespace": "off",
-        "@typescript-eslint/no-unused-vars": "off",
-        "@typescript-eslint/unbound-method": "off",
+        "@typescript-eslint/no-unused-vars": [
+          "error",
+          {
+            "argsIgnorePattern": "^_"
+          }
+        ],
         "@typescript-eslint/no-unnecessary-condition": [
           "error",
           {
             "allowConstantLoopConditions": true
           }
         ],
-        "@typescript-eslint/no-unnecessary-type-arguments": "error",
-        "@typescript-eslint/prefer-nullish-coalescing": "off",
-        "@typescript-eslint/prefer-optional-chain": "off"
+        "@typescript-eslint/no-unnecessary-type-arguments": "error"
       },
       "parser": "@typescript-eslint/parser",
       "parserOptions": {
@@ -86,8 +58,7 @@
   ],
   "env": {
     "es6": true,
-    "browser": true,
-    "node": true
+    "browser": true
   },
   "extends": [
     "eslint:recommended",
@@ -147,7 +118,12 @@
     "no-tabs": "error",
     "no-trailing-spaces": "error",
     // Switch this as needed, otherwise too much noise
-    "no-unused-vars": "off",
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_"
+      }
+    ],
     "no-useless-concat": "error",
     "object-curly-spacing": [
       "error",

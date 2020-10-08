@@ -36,8 +36,8 @@ function h(...args: unknown[]): El {
       }
     }
     else if (typeof arg === 'object') {
-      // TODO: Bundle size...
-      api.property(el as Node, arg, null, Boolean(api.ns));
+      // eslint-disable-next-line no-implicit-coercion
+      api.property(el as Node, arg, null, !!api.ns);
     }
     else if (typeof arg === 'function') {
       if (el) {
@@ -52,8 +52,8 @@ function h(...args: unknown[]): El {
     }
     else {
       // Default case, cast as string and add
-      // TODO: Bundle size...
-      api.add(el as Node, String(arg));
+      // eslint-disable-next-line no-implicit-coercion,@typescript-eslint/restrict-plus-operands
+      api.add(el as Node, '' + arg);
     }
   };
   args.forEach(item);

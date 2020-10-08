@@ -30,7 +30,7 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     || (name === 'attrs' && (isAttr = true))
   ) {
-    for (name in value as object) {
+    for (name in value as { [k: string]: unknown }) {
       api.property(el, (value as { [k: string]: unknown })[name], name, isAttr, isCss);
     }
   }
