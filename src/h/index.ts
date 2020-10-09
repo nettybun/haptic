@@ -5,6 +5,7 @@ import { insert } from './nodeInsert.js';
 import { property } from './nodeProperty.js';
 import { remove } from './nodeRemove.js';
 
+// These don't depend on any particular observer implementation
 import { svg } from './util/svg.js';
 import { when } from './util/when.js';
 

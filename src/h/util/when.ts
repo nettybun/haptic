@@ -3,7 +3,7 @@ import { h } from '../index.js';
 type El = Element | Node | DocumentFragment | undefined;
 type Component = (...args: unknown[]) => El;
 
-/** Useful for switching content when `condition` contains a signals */
+/** Useful for switching content when `condition` contains a signal/observer */
 const when = <T extends string>(
   condition: () => T,
   views: { [k in T]?: Component }
