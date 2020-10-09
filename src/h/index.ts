@@ -1,17 +1,18 @@
 import { h as _h } from './h.js';
-import { svg } from './svg.js';
 
 import { add } from './nodeAdd.js';
 import { insert } from './nodeInsert.js';
 import { property } from './nodeProperty.js';
 import { remove } from './nodeRemove.js';
 
+import { svg } from './util/svg.js';
+import { when } from './util/when.js';
+
 const api = {
   // Element namespace URL such as SVG or MathML
   ns: '',
   // Element creation
   h: _h,
-  svg,
   // Customizable internal methods for h()
   add,
   insert,
@@ -24,4 +25,4 @@ const api = {
 // Reference the latest internal h() allowing others to customize the call
 const h: typeof _h = (...args) => api.h(...args);
 
-export { h, api };
+export { h, svg, when, api };

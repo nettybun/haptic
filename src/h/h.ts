@@ -4,9 +4,10 @@ import type {
   GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements
 } from '../jsx';
 
-type El = Element | Node | DocumentFragment | undefined
+type El = Element | Node | DocumentFragment | undefined;
+type Component = (...args: unknown[]) => El;
 
-function h(tag?: string | [], props?: unknown, ...children: unknown[]): El
+function h(tag?: string | [] | Component, props?: unknown, ...children: unknown[]): El
 function h(...args: unknown[]): El {
   let el: El;
   const item = (arg: unknown) => {
