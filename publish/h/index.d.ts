@@ -1,5 +1,8 @@
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from '../jsx';
-export declare function h(tag?: string | [], props?: unknown, ...children: unknown[]): Element | Node | DocumentFragment | undefined;
+
+type El = Element | Node | DocumentFragment | undefined;
+type Component = (...args: unknown[]) => El;
+declare function h(tag?: string | [] | Component, props?: unknown, ...children: unknown[]): El;
 declare namespace h {
     namespace JSX {
         type Element = HTMLElement;
@@ -27,13 +30,20 @@ declare namespace h {
     }
 }
 type Frag = { _startMark: Text }
-export const api: {
+declare const api: {
     ns: string;
     h: typeof h;
-    svg: <T extends () => Element>(closure: T) => ReturnType<T>;
     add: (parent: Node, value: unknown, endMark?: Node) => Node | Frag;
     insert: (el: Node, value: unknown, endMark?: Node, current?: Node | Frag, startNode?: ChildNode | null) => Node | Frag | undefined;
     property: (el: Node, value: unknown, name: string | null, isAttr?: boolean, isCss?: boolean) => void;
     remove: (parent: Node, startNode: ChildNode | null, endMark: Node) => void;
     subscribe: (_: () => void) => void;
 };
+
+/** Renders SVGs by setting h() to the SVG namespace */
+declare const svg: <T extends () => Element>(closure: T) => ReturnType<T>;
+
+/** Useful for switching content when `condition` contains a signals */
+declare const when: <T extends string>(condition: () => T, views: { [k in T]?: Component | undefined; }) => () => El;
+
+export { h, svg, when, api };

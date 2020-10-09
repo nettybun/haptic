@@ -1,7 +1,11 @@
 import { api as _api } from './h';
+
 import type { Signal } from './s';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
-export function h(tag?: string | [], props?: unknown, ...children: unknown[]): Element | Node | DocumentFragment | undefined;
+
+type El = Element | Node | DocumentFragment | undefined;
+type Component = (...args: unknown[]) => El;
+declare function h(tag?: string | [] | Component, props?: unknown, ...children: unknown[]): El;
 declare namespace h {
     namespace JSX {
         type MaybeSignal<T> = T | Signal<T>;
@@ -32,4 +36,6 @@ declare namespace h {
     }
 }
 // Swap out h to have the correct JSX namespace
-export const api: Omit<typeof _api, 'h'> & { h: typeof h };
+declare const api: Omit<typeof _api, 'h'> & { h: typeof h };
+
+export { h, api };
