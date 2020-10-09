@@ -1,3 +1,5 @@
 node_modules
 publish/jsx.d.ts
+publish/readme.md
+publish/license
 *.map
