@@ -1,4 +1,4 @@
-import { api as _api } from './h';
+import { api as _api, svg, when } from './h';
 
 import type { Signal } from './s';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
@@ -38,4 +38,4 @@ declare namespace h {
 // Swap out h to have the correct JSX namespace
 declare const api: Omit<typeof _api, 'h'> & { h: typeof h };
 
-export { h, api };
+export { h, svg, when, api };

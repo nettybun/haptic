@@ -10,7 +10,7 @@
 // was imported instead, the JSX definitions wouldn't support haptic/s
 
 import { subscribe } from './s';
-import { h, api } from './h';
+import { h, svg, when, api } from './h';
 
 import type { Signal } from './s';
 import type {
@@ -19,7 +19,7 @@ import type {
 
 api.subscribe = subscribe;
 
-export { h, api };
+export { h, svg, when, api };
 
 declare namespace h {
   export namespace JSX {
