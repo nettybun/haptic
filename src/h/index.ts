@@ -9,6 +9,7 @@ import { remove } from './nodeRemove.js';
 import { svg } from './util/svg.js';
 import { when } from './util/when.js';
 
+// This API should be compatible with community libraries that extend Sinuous
 const api = {
   // Element namespace URL such as SVG or MathML
   ns: '',
@@ -18,7 +19,8 @@ const api = {
   add,
   insert,
   property,
-  remove,
+  // Renamed for Sinuous API compatibility
+  rm: remove,
   // Replace this with an observable implementation to allow reactivity
   subscribe: (_: () => void) => {},
 };

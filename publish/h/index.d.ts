@@ -36,7 +36,7 @@ declare const api: {
     add: (parent: Node, value: unknown, endMark?: Node) => Node | Frag;
     insert: (el: Node, value: unknown, endMark?: Node, current?: Node | Frag, startNode?: ChildNode | null) => Node | Frag | undefined;
     property: (el: Node, value: unknown, name: string | null, isAttr?: boolean, isCss?: boolean) => void;
-    remove: (parent: Node, startNode: ChildNode | null, endMark: Node) => void;
+    rm: (parent: Node, startNode: ChildNode | null, endMark: Node) => void;
     subscribe: (_: () => void) => void;
 };
 

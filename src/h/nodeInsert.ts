@@ -57,7 +57,7 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
               && (current as Frag)._startMark.nextSibling
           ) || endMark.previousSibling;
         }
-        api.remove(el, startNode, endMark);
+        api.rm(el, startNode, endMark);
       }
     } else {
       el.textContent = '';
