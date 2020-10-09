@@ -1,13 +1,13 @@
-// This bundle uses sinueux/s as the observer implementation. Developers using
+// This bundle uses haptic/s as the observer implementation. Developers using
 // the library can load both h and s by writing:
 
-// import { h } from 'sinueux';
-// import { s, computed } from 'sinueux/s';
+// import { h } from 'haptic';
+// import { s, computed } from 'haptic/s';
 
-// Since the sinueux package doesn't embed sinueux/s, code will only be loaded
+// Since the haptic package doesn't embed haptic/s, code will only be loaded
 // once despite having two import sites. This should work well for both bundlers
-// and unbundled (ESM-only; Snowpack/UNPKG) workflows. Note that if sinueux/h
-// was imported instead, the JSX definitions wouldn't support sinueux/s
+// and unbundled (ESM-only; Snowpack/UNPKG) workflows. Note that if haptic/h
+// was imported instead, the JSX definitions wouldn't support haptic/s
 
 import { subscribe } from './s';
 import { h, api } from './h';
