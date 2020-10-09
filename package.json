@@ -1,6 +1,6 @@
 {
   "name": "haptic",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Straightforward reactive web rendering in TSX",
   "type": "module",
   "main": "src/index.ts",
