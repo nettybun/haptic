@@ -4,9 +4,6 @@ type Value = Node | string | number
 type Frag = { _startMark: Text }
 type FragReturn = Frag | Node | undefined
 
-const EMPTY_ARR: [] = [];
-const DOCUMENT_FRAGMENT_NODE = 11 as const;
-
 const asNode = (value: unknown): Text | Node | DocumentFragment => {
   if (typeof value === 'string') {
     return document.createTextNode(value);
@@ -15,14 +12,14 @@ const asNode = (value: unknown): Text | Node | DocumentFragment => {
   if (!(value instanceof Node)) {
     // Passing an empty array creates a DocumentFragment
     // Note this means api.add is not purely a subcall of api.h; it can nest
-    return api.h(EMPTY_ARR, value) as DocumentFragment;
+    return api.h([], value) as DocumentFragment;
   }
   return value;
 };
 
 const maybeFragOrNode = (value: Text | Node | DocumentFragment): FragReturn => {
   const { childNodes } = value;
-  if (value.nodeType !== DOCUMENT_FRAGMENT_NODE) return;
+  if (value.nodeType !== 11 /* DOCUMENT_FRAGMENT_NODE */) return;
   if (childNodes.length < 2) return childNodes[0];
   // For a fragment of 2 elements or more add a startMark. This is required for
   // multiple nested conditional computeds that return fragments.
