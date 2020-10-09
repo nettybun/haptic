@@ -1,7 +1,7 @@
 {
-  "name": "sinueux",
-  "version": "0.0.0",
-  "description": "TSX sibling of Sinuous with less twist",
+  "name": "haptic",
+  "version": "1.0.0",
+  "description": "Straightforward reactive web rendering in TSX",
   "type": "module",
   "main": "index.js",
   "types": "index.d.ts",
@@ -9,6 +9,6 @@
   "author": "Gen Hames",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/nthm/sinueux"
+    "url": "https://gitlab.com/nthm/haptic"
   }
 }

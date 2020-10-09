@@ -1,15 +1,15 @@
 {
-  "name": "sinueux",
-  "version": "0.0.0",
-  "description": "TSX sibling of Sinuous with less twist",
-  "keywords": [],
+  "name": "haptic",
+  "version": "1.0.0",
+  "description": "Straightforward reactive web rendering in TSX",
   "type": "module",
   "main": "src/index.ts",
+  "types": "src/index.d.ts",
   "license": "MIT",
   "author": "Gen Hames",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/nthm/sinueux"
+    "url": "https://gitlab.com/nthm/haptic"
   },
   "scripts": {
     "build": "npm run build:h && npm run build:s && npm run build:index",
