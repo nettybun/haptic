@@ -14,7 +14,7 @@ function h(...args: unknown[]): El {
     // @ts-expect-error Empty if body
     // eslint-disable-next-line eqeqeq
     if (arg == null);
-    if (typeof arg === 'string') {
+    else if (typeof arg === 'string') {
       if (el) {
         api.add(el, arg);
       } else {
