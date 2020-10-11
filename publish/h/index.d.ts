@@ -43,7 +43,7 @@ declare const api: {
 /** Renders SVGs by setting h() to the SVG namespace */
 declare const svg: <T extends () => Element>(closure: T) => ReturnType<T>;
 
-/** Useful for switching content when `condition` contains a signal/observer */
+/** For switching content when `condition` contains a signal/observer */
 declare const when: <T extends string>(condition: () => T, views: { [k in T]?: Component | undefined; }) => () => El;
 
-export { h, svg, when, api };
+export { h, api, svg, when };

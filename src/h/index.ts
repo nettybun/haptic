@@ -5,7 +5,6 @@ import { insert } from './nodeInsert.js';
 import { property } from './nodeProperty.js';
 import { remove } from './nodeRemove.js';
 
-// These don't depend on any particular observer implementation
 import { svg } from './util/svg.js';
 import { when } from './util/when.js';
 
@@ -21,11 +20,14 @@ const api = {
   property,
   // Renamed for Sinuous API compatibility
   rm: remove,
-  // Replace this with an observable implementation to allow reactivity
-  subscribe: (_: () => void) => {},
+  // Replace these no-ops with ones from an observable implementation to enable
+  // reactivity: nodeInsert.ts needs subscribe() and when.ts needs sample()
+  sample: <T>(fn: () => T): T => fn(),
+  // Not defining a strict return type for subscribe; h() doesn't use it
+  subscribe: <T>(fn: () => T): void => { fn(); },
 };
 
 // Reference the latest internal h() allowing others to customize the call
 const h: typeof _h = (...args) => api.h(...args);
 
-export { h, svg, when, api };
+export { h, api, svg, when };

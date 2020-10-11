@@ -38,4 +38,4 @@ declare namespace h {
 // Swap out h to have the correct JSX namespace
 declare const api: Omit<typeof _api, 'h'> & { h: typeof h };
 
-export { h, svg, when, api };
+export { h, api, svg, when };

@@ -9,8 +9,8 @@
 // and unbundled (ESM-only; Snowpack/UNPKG) workflows. Note that if haptic/h
 // was imported instead, the JSX definitions wouldn't support haptic/s
 
-import { subscribe } from './s';
-import { h, svg, when, api } from './h';
+import { subscribe, sample } from './s';
+import { h, api, svg, when } from './h';
 
 import type { Signal } from './s';
 import type {
@@ -18,8 +18,9 @@ import type {
 } from './jsx';
 
 api.subscribe = subscribe;
+api.sample = sample;
 
-export { h, svg, when, api };
+export { h, api, svg, when };
 
 declare namespace h {
   export namespace JSX {
