@@ -37,7 +37,8 @@ declare const api: {
     insert: (el: Node, value: unknown, endMark?: Node, current?: Node | Frag, startNode?: ChildNode | null) => Node | Frag | undefined;
     property: (el: Node, value: unknown, name: string | null, isAttr?: boolean, isCss?: boolean) => void;
     rm: (parent: Node, startNode: ChildNode | null, endMark: Node) => void;
-    subscribe: (_: () => void) => void;
+    sample: <T>(fn: () => T) => T;
+    subscribe: <T>(fn: () => T) => void;
 };
 
 /** Renders SVGs by setting h() to the SVG namespace */
