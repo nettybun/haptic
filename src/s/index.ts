@@ -4,29 +4,31 @@
 // list of update methods of their observers. This code is forked from Sinuous
 // which describe subjects as "Observables" despite the term already being used
 // in the JS ecosystem to refer to stream-focused architectures. To avoid
-// confusion this uses "Signal" instead, which comes from the Solid framework.
+// confusion this uses "Signal" instead, which comes from the Solid framework
 
-// This API exports two types of signals. Signal<T> is read-write and updates
-// only when written directly. ComputedSignal<T> is read-only and updates
-// automatically when any of its defining Signals or ComputedSignals change.
+// This API exports two types of signals. WritableSignal<T> is read-write and
+// updates only when written to directly. Meanwhile a ComputedSignal<T> is
+// read-only and updates automatically when any of its defining signals change
 
-// An update method exists for each ComputedSignal. It holds a list of Signals
-// it depends on, and a list of any nested update methods from ComputedSignals.
+// An update method is made for each ComputedSignal which is responsible for
+// pulling from the WritableSignals it depends on and calling any nested update
+// methods (children ComputedSignals)
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 type X = any
 type Fn = () => unknown
+type FnUpdated<F> = F & { update: Update<X> }
 
 type Base<T> = {
   (): T
   $o: 1
 }
 
-type Signal<T> = Base<T> & {
+type WritableSignal<T> = Base<T> & {
   (nextValue: T): T
-  observers: Set<Update<X>>
-  observersRan: Set<Update<X>> | undefined
+  obs: Set<Update<X>>
+  obsLive: Set<Update<X>> | undefined
   pending: T | []
 }
 
@@ -34,23 +36,25 @@ type ComputedSignal<T> = Base<T> & {
   update: Update<T>
 }
 
+type Signal<T> = WritableSignal<T> | ComputedSignal<T>
+
 type Update<T> = {
   (): T
   stale: boolean
-  signals: Signal<X>[]
+  signals: WritableSignal<X>[]
   children: Update<X>[]
 }
 
 const EMPTY_ARR: [] = [];
 
 let runningUpdateFn: Update<X> | undefined;
-let transactionQueue: Signal<X>[] | undefined;
+let transactionQueue: WritableSignal<X>[] | undefined;
 
-function createSignal<T>(value: T): Signal<T> {
-  const signal: Signal<T> = (...args: T[]) => {
+function createWritableSignal<T>(value: T) {
+  const signal: WritableSignal<T> = (...args: T[]) => {
     if (!args.length) {
-      if (runningUpdateFn && !signal.observers.has(runningUpdateFn)) {
-        signal.observers.add(runningUpdateFn);
+      if (runningUpdateFn && !signal.obs.has(runningUpdateFn)) {
+        signal.obs.add(runningUpdateFn);
         runningUpdateFn.signals.push(signal);
       }
       return value;
@@ -74,24 +78,24 @@ function createSignal<T>(value: T): Signal<T> {
     runningUpdateFn = undefined;
 
     // Update can alter signal.observers so make a copy before running
-    signal.observersRan = new Set(signal.observers);
-    signal.observersRan.forEach(c => { c.stale = true; });
-    signal.observersRan.forEach(c => { if (c.stale) c(); });
+    signal.obsLive = new Set(signal.obs);
+    signal.obsLive.forEach(c => { c.stale = true; });
+    signal.obsLive.forEach(c => { if (c.stale) c(); });
 
     runningUpdateFn = prevUpdateFn;
     return value;
   };
   // Used in h/nodeProperty.ts
   signal.$o = 1 as const;
-  signal.observers = new Set<Update<X>>();
-  signal.observersRan = undefined;
+  signal.obs = new Set<Update<X>>();
+  signal.obsLive = undefined;
   // The 'not set' value must be unique so `nullish` can be set in a transaction
   signal.pending = EMPTY_ARR;
 
   return signal;
 }
 
-function createComputedSignal<F extends Fn, T = ReturnType<F>>(fn: F): ComputedSignal<T> {
+function createComputedSignal<F extends Fn, T = ReturnType<F>>(fn: F) {
   let value: T;
   const update: Update<T> = () => {
     const prevUpdateFn = runningUpdateFn;
@@ -124,7 +128,7 @@ function createComputedSignal<F extends Fn, T = ReturnType<F>>(fn: F): ComputedS
     allChildren.forEach(child => {
       if (!child.stale) {
         child.signals.forEach(signal => {
-          signal.observersRan && signal.observersRan.delete(child);
+          signal.obsLive && signal.obsLive.delete(child);
         });
       }
     });
@@ -146,7 +150,7 @@ function createComputedSignal<F extends Fn, T = ReturnType<F>>(fn: F): ComputedS
   // Used in h/nodeProperty.ts
   computedSignal.$o = 1 as const;
   computedSignal.update = update;
-  (fn as F & { update: Update<X> }).update = update;
+  (fn as FnUpdated<F>).update = update;
 
   // eslint-disable-next-line eqeqeq
   // if (runningUpdate == null) {
@@ -161,19 +165,19 @@ function createComputedSignal<F extends Fn, T = ReturnType<F>>(fn: F): ComputedS
 
 function subscribe<F extends Fn>(fn: F) {
   createComputedSignal(fn);
-  return () => unsubscribe(fn as F & { update: Update<X> });
+  return () => unsubscribe(fn as FnUpdated<F>);
 }
 
-function unsubscribe<F extends Fn & { update: Update<X> }>(fn: F) {
-  return removeConnections(fn.update);
+function unsubscribe<F extends Fn>(fn: F) {
+  return removeConnections((fn as FnUpdated<F>).update);
 }
 
 function removeConnections(update: Update<X>) {
   update.children.forEach(removeConnections);
 
   update.signals.forEach(signal => {
-    signal.observers.delete(update);
-    signal.observersRan && signal.observersRan.delete(update);
+    signal.obs.delete(update);
+    signal.obsLive && signal.obsLive.delete(update);
   });
 
   resetUpdate(update);
@@ -222,11 +226,11 @@ function on(signals: Signal<X>[], fn: Fn, options = { onlyChanges: true }) {
 }
 
 // Types
-export { Signal, ComputedSignal, Update };
+export { Signal, WritableSignal, ComputedSignal, Update };
 
 export {
-  createSignal as s,
-  createSignal as signal,
+  createWritableSignal as s,
+  createWritableSignal as signal,
   createComputedSignal as computed,
   subscribe,
   unsubscribe,
