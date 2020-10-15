@@ -41,6 +41,7 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
     current = value;
   }
   else if (typeof value === 'function') {
+    api.add(el, document.createComment(`signal-sub-${value.name}`), endMark);
     api.subscribe(() => {
       current = api.insert(el, (value as () => unknown).call({ el, endMark }), endMark, current, startNode);
     });

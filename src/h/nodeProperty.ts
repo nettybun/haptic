@@ -40,6 +40,7 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
     handleEvent(el, name, value as EventHandler);
   }
   else if (typeof value === 'function') {
+    (el as HTMLElement | SVGElement).setAttribute(`data-signal-sub-${name}`, value.name);
     api.subscribe(() => {
       api.property(el, value.call({ el, name }), name, isAttr, isCss);
     });
