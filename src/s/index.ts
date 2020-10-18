@@ -99,8 +99,8 @@ function createComputedSignal<F extends Fn, T = ReturnType<F>>(fn: F) {
   cs.stale = true;
   cs.ws = [];
   cs.csNested = [];
-  // Be lazy? Will run on read since `stale = true`
-  // value = updateComputed(cs);
+  // Lazy eval would be nice but h() needs this to work correctly
+  cs();
   return cs;
 }
 
