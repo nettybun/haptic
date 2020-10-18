@@ -1,24 +1,20 @@
 // Signal
 
-// This implements the Observer Pattern architecture where subjects maintain a
-// list of update methods of their observers. This code is forked from Sinuous
-// which describe subjects as "Observables" despite the term already being used
-// in the JS ecosystem to refer to stream-focused architectures. To avoid
-// confusion this uses "Signal" instead, which comes from the Solid framework
+// This is an implementation of the Observer Pattern for updating data; forked
+// from Sinuous. The architecture contains subjects and observers. Sinuous
+// describes these as "Observables", despite the term already being used in the
+// JS ecosystem to refer to stream-focused generator-like architectures. To
+// avoid confusion this uses "Signals", which comes from the Solid framework.
 
-// This API exports two types of signals. WritableSignal<T> is read-write and
-// updates only when written to directly. Meanwhile a ComputedSignal<T> is
-// read-only and updates automatically when any of its defining signals change
-
-// An update method is made for each ComputedSignal which is responsible for
-// pulling from the WritableSignals it depends on and calling any nested update
-// methods (children ComputedSignals)
+// The API exports two types of signals. WritableSignal is a read-write data
+// store that updates only when written directly. Each one maintains a list of
+// observers to notify of changes. An observer is a ComputedSignal, which is a
+// read-only data stores that updates when any of defining signals change.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 type X = any
 type Fn = () => unknown
-type FnUpdated<F> = F & { update: Update<X> }
 
 type Base<T> = {
   (): T
@@ -27,166 +23,140 @@ type Base<T> = {
 
 type WritableSignal<T> = Base<T> & {
   (nextValue: T): T
-  obs: Set<Update<X>>
-  obsLive: Set<Update<X>> | undefined
+  cs: Set<ComputedSignal<X>>
+  csRun: Set<ComputedSignal<X>> | undefined
   pending: T | []
 }
 
 type ComputedSignal<T> = Base<T> & {
-  update: Update<T>
+  stale: boolean
+  ws: WritableSignal<X>[]
+  csNested: ComputedSignal<X>[]
 }
 
 type Signal<T> = WritableSignal<T> | ComputedSignal<T>
 
-type Update<T> = {
-  (): T
-  stale: boolean
-  signals: WritableSignal<X>[]
-  children: Update<X>[]
-}
-
 const EMPTY_ARR: [] = [];
 
-let runningUpdateFn: Update<X> | undefined;
+let runningComputed: ComputedSignal<X> | undefined;
 let transactionQueue: WritableSignal<X>[] | undefined;
 
 function createWritableSignal<T>(value: T) {
-  const signal: WritableSignal<T> = (...args: T[]) => {
+  const ws: WritableSignal<T> = (...args: T[]) => {
     if (!args.length) {
-      if (runningUpdateFn && !signal.obs.has(runningUpdateFn)) {
-        signal.obs.add(runningUpdateFn);
-        runningUpdateFn.signals.push(signal);
+      if (runningComputed && !ws.cs.has(runningComputed)) {
+        ws.cs.add(runningComputed);
+        runningComputed.ws.push(ws);
       }
       return value;
     }
-
     const [nextValue] = args;
 
     if (transactionQueue) {
-      if (signal.pending === EMPTY_ARR) {
-        transactionQueue.push(signal);
+      if (ws.pending === EMPTY_ARR) {
+        transactionQueue.push(ws);
       }
-      signal.pending = nextValue;
+      ws.pending = nextValue;
       return nextValue;
     }
-
     value = nextValue;
-
-    // Temporarily clear `runningUpdateFn` otherwise a update triggered by a
+    // Temporarily clear `runningComputed` otherwise a update triggered by a
     // set in another update is marked as a listener
-    const prevUpdateFn = runningUpdateFn;
-    runningUpdateFn = undefined;
+    const prevUpdateFn = runningComputed;
+    runningComputed = undefined;
 
     // Update can alter signal.observers so make a copy before running
-    signal.obsLive = new Set(signal.obs);
-    signal.obsLive.forEach(c => { c.stale = true; });
-    signal.obsLive.forEach(c => { if (c.stale) c(); });
+    ws.csRun = new Set(ws.cs);
+    ws.csRun.forEach(c => { c.stale = true; });
+    ws.csRun.forEach(c => { if (c.stale) c(); });
 
-    runningUpdateFn = prevUpdateFn;
+    runningComputed = prevUpdateFn;
     return value;
   };
   // Used in h/nodeProperty.ts
-  signal.$o = 1 as const;
-  signal.obs = new Set<Update<X>>();
-  signal.obsLive = undefined;
+  ws.$o = 1 as const;
+  ws.cs = new Set();
+  ws.csRun = undefined;
   // The 'not set' value must be unique so `nullish` can be set in a transaction
-  signal.pending = EMPTY_ARR;
+  ws.pending = EMPTY_ARR;
 
-  return signal;
+  return ws;
 }
 
 function createComputedSignal<F extends Fn, T = ReturnType<F>>(fn: F) {
   let value: T;
-  const update: Update<T> = () => {
-    const prevUpdateFn = runningUpdateFn;
-    if (runningUpdateFn) {
-      runningUpdateFn.children.push(update);
-    }
-    const prevChildren = update.children;
-
-    removeConnections(update);
-    update.stale = false;
-    runningUpdateFn = update;
-    value = fn() as T;
-
-    // If any children updates were removed mark them as fresh (not stale)
-    // Check the diff of the children list between pre and post update
-    prevChildren.forEach(c => {
-      if (update.children.indexOf(c) === -1) {
-        c.stale = false;
-      }
-    });
-
-    // TODO: Remove this with a while/stack
-    const getChildrenDeep = (children: Update<X>[]): Update<X>[] =>
-      children.reduce(
-        (acc, curr) => acc.concat(curr, getChildrenDeep(curr.children)),
-        [] as Update<X>[]
-      );
-    // If any listeners were marked as fresh remove their signals from the run lists
-    const allChildren = getChildrenDeep(update.children);
-    allChildren.forEach(child => {
-      if (!child.stale) {
-        child.signals.forEach(signal => {
-          signal.obsLive && signal.obsLive.delete(child);
-        });
-      }
-    });
-    runningUpdateFn = prevUpdateFn;
-    return value;
-  };
-  update.stale = true;
-  update.signals = [];
-  update.children = [];
-
-  const computedSignal: ComputedSignal<T> = () => {
-    if (!update.stale) {
-      update.signals.forEach(signal => { signal(); });
-    } else {
-      value = update();
+  const cs: ComputedSignal<T> = () => {
+    if (cs.stale) {
+      value = updateComputed(cs, fn);
+    } else if (runningComputed) {
+      // If inside a running computed, pass this computed's signals to it
+      cs.ws.forEach(ws => { ws(); });
     }
     return value;
   };
   // Used in h/nodeProperty.ts
-  computedSignal.$o = 1 as const;
-  computedSignal.update = update;
-  (fn as FnUpdated<F>).update = update;
-
-  // eslint-disable-next-line eqeqeq
-  // if (runningUpdate == null) {
-  //   console.warn('Update has no parent so it will never be disposed');
-  // }
-
-  resetUpdate(update);
-  update();
-
-  return computedSignal;
+  cs.$o = 1 as const;
+  cs.stale = true;
+  cs.ws = [];
+  cs.csNested = [];
+  // Be lazy? Will run on read since `stale = true`
+  // value = updateComputed(cs);
+  return cs;
 }
 
-function subscribe<F extends Fn>(fn: F) {
-  createComputedSignal(fn);
-  return () => unsubscribe(fn as FnUpdated<F>);
-}
+function updateComputed
+  <F extends Fn, T = ReturnType<F>>(cs: ComputedSignal<T>, updateFn: F) {
+  const prevComputed = runningComputed;
+  if (runningComputed) {
+    runningComputed.csNested.push(cs);
+  }
+  const prevNested = cs.csNested;
 
-function unsubscribe<F extends Fn>(fn: F) {
-  return removeConnections((fn as FnUpdated<F>).update);
-}
+  unsubscribe(cs);
+  cs.stale = false;
+  runningComputed = cs;
+  const value = updateFn() as T;
 
-function removeConnections(update: Update<X>) {
-  update.children.forEach(removeConnections);
-
-  update.signals.forEach(signal => {
-    signal.obs.delete(update);
-    signal.obsLive && signal.obsLive.delete(update);
+  // If any children updates were removed mark them as fresh (not stale)
+  // Check the diff of the children list between pre and post update
+  prevNested.forEach(c => {
+    if (cs.csNested.indexOf(c) === -1) {
+      c.stale = false;
+    }
   });
 
-  resetUpdate(update);
+  // If any listeners were marked as fresh remove their signals from the run lists
+  let curr: ComputedSignal<X> | undefined;
+  const queue = ([] as ComputedSignal<X>[]).concat(cs.csNested);
+  // eslint-disable-next-line no-cond-assign
+  while (curr = queue.pop()) {
+    if (!curr.stale) {
+      curr.ws.forEach(ws => {
+        ws.csRun && ws.csRun.delete(curr as ComputedSignal<X>); // TS bug
+      });
+    }
+    curr.csNested.forEach(cs => queue.push(cs));
+  }
+  runningComputed = prevComputed;
+  return value;
 }
 
-function resetUpdate(update: Update<X>) {
-  // Keep track of which signals trigger updates. Needed for unsubscribe.
-  update.signals = [];
-  update.children = [];
+// In Sinuous `fn` gains a new property, but I don't agree with that...
+function subscribe(fn: Fn) {
+  const cs = createComputedSignal(fn);
+  return () => unsubscribe(cs);
+}
+
+function unsubscribe(cs: ComputedSignal<X>) {
+  cs.csNested.forEach(unsubscribe);
+
+  cs.ws.forEach(ws => {
+    ws.cs.delete(cs);
+    ws.csRun && ws.csRun.delete(cs);
+  });
+
+  cs.ws = [];
+  cs.csNested = [];
 }
 
 function transaction<T>(fn: () => T): T {
@@ -207,10 +177,10 @@ function transaction<T>(fn: () => T): T {
 }
 
 function sample<T>(fn: () => T): T {
-  const prevUpdateFn = runningUpdateFn;
-  runningUpdateFn = undefined;
+  const prevComputed = runningComputed;
+  runningComputed = undefined;
   const value = fn();
-  runningUpdateFn = prevUpdateFn;
+  runningComputed = prevComputed;
   return value;
 }
 
@@ -226,11 +196,12 @@ function on(signals: Signal<X>[], fn: Fn, options = { onlyChanges: true }) {
 }
 
 // Types
-export { Signal, WritableSignal, ComputedSignal, Update };
+export { Signal, WritableSignal, ComputedSignal };
 
 export {
   createWritableSignal as s,
   createWritableSignal as signal,
+  createComputedSignal as c,
   createComputedSignal as computed,
   subscribe,
   unsubscribe,
