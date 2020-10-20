@@ -134,6 +134,20 @@ function unsubscribe(cs: ComputedSignal<X>) {
   cs.csNested = [];
 }
 
+function capture(fn: (unsubscribe?: () => void) => unknown): void {
+  const prevComputed = runningComputed;
+  // Twice `as` since type is wrong but sufficient
+  const cap = (() => {}) as unknown as ComputedSignal<X>;
+  cap.ws = [];
+  cap.csNested = [];
+  runningComputed = cap;
+  fn(() => {
+    unsubscribe(cap);
+    runningComputed = undefined;
+  });
+  runningComputed = prevComputed;
+}
+
 function transaction<T>(fn: () => T): T {
   const prevQueue = transactionQueue;
   transactionQueue = [];
@@ -177,6 +191,7 @@ export {
   createWritableSignal as signal,
   createComputedSignal as c,
   createComputedSignal as computed,
+  capture,
   subscribe,
   unsubscribe,
   transaction,
