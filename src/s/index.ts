@@ -62,7 +62,7 @@ function createWritableSignal<T>(value: T) {
     value = nextValue;
     // Temporarily clear `runningComputed` otherwise a update triggered by a
     // set in another update is marked as a listener
-    const prevUpdateFn = runningComputed;
+    const prevComputed = runningComputed;
     runningComputed = undefined;
 
     // Update can alter signal.observers so make a copy before running
@@ -70,7 +70,7 @@ function createWritableSignal<T>(value: T) {
     ws.csRun.forEach(c => { c.stale = true; });
     ws.csRun.forEach(c => { if (c.stale) c(); });
 
-    runningComputed = prevUpdateFn;
+    runningComputed = prevComputed;
     return value;
   };
   // Used in h/nodeProperty.ts
