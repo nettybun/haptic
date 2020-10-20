@@ -41,6 +41,9 @@ const EMPTY_ARR: [] = [];
 let runningComputed: ComputedSignal<X> | undefined;
 let transactionQueue: WritableSignal<X>[] | undefined;
 
+// It's a smaller bundle gzip size when these aren't arrow functions.
+// Similarly, it's smaller for .{ws,csNested} = [] to not be factored out.
+
 function createWritableSignal<T>(value: T) {
   const ws: WritableSignal<T> = (...args: T[]) => {
     if (!args.length) {
