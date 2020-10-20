@@ -82,15 +82,28 @@ function createWritableSignal<T>(value: T) {
   return ws;
 }
 
-function createComputedSignal<F extends Fn, T = ReturnType<F>>(fn: F) {
+function createComputedSignal<F extends Fn, T = ReturnType<F>>(updateFn: F) {
   let value: T;
   const cs: ComputedSignal<T> = () => {
-    if (cs.stale) {
-      value = updateComputed(cs, fn);
-    } else if (runningComputed) {
-      // If inside a running computed, pass this computed's signals to it
-      cs.ws.forEach(ws => { ws(); });
+    if (!cs.stale) {
+      if (runningComputed) {
+        // If inside a running computed, pass this computed's signals to it
+        cs.ws.forEach(ws => { ws(); });
+      }
+      return value;
     }
+
+    // Stale, so update the value
+    const prevComputed = runningComputed;
+    if (prevComputed) {
+      prevComputed.csNested.push(cs);
+    }
+    unsubscribe(cs);
+    cs.stale = false;
+    runningComputed = cs;
+    value = updateFn() as T;
+    runningComputed = prevComputed;
+
     return value;
   };
   // Used in h/nodeProperty.ts
@@ -101,43 +114,6 @@ function createComputedSignal<F extends Fn, T = ReturnType<F>>(fn: F) {
   // Lazy eval would be nice but h() needs this to work correctly
   cs();
   return cs;
-}
-
-function updateComputed
-  <F extends Fn, T = ReturnType<F>>(cs: ComputedSignal<T>, updateFn: F) {
-  const prevComputed = runningComputed;
-  if (runningComputed) {
-    runningComputed.csNested.push(cs);
-  }
-  const prevNested = cs.csNested;
-
-  unsubscribe(cs);
-  cs.stale = false;
-  runningComputed = cs;
-  const value = updateFn() as T;
-
-  // If any children updates were removed mark them as fresh (not stale)
-  // Check the diff of the children list between pre and post update
-  prevNested.forEach(c => {
-    if (cs.csNested.indexOf(c) === -1) {
-      c.stale = false;
-    }
-  });
-
-  // If any listeners were marked as fresh remove their signals from the run lists
-  let curr: ComputedSignal<X> | undefined;
-  const queue = ([] as ComputedSignal<X>[]).concat(cs.csNested);
-  // eslint-disable-next-line no-cond-assign
-  while (curr = queue.pop()) {
-    if (!curr.stale) {
-      curr.ws.forEach(ws => {
-        ws.csRun && ws.csRun.delete(curr as ComputedSignal<X>); // TS bug
-      });
-    }
-    curr.csNested.forEach(cs => queue.push(cs));
-  }
-  runningComputed = prevComputed;
-  return value;
 }
 
 // In Sinuous `fn` gains a new property, but I don't agree with that...
