@@ -24,7 +24,7 @@ type Base<T> = {
 type WritableSignal<T> = Base<T> & {
   (nextValue: T): T
   cs: Set<ComputedSignal<X>>
-  csRun: Set<ComputedSignal<X>> | undefined
+  csRun?: Set<ComputedSignal<X>>
   pending: T | []
 }
 
@@ -76,7 +76,6 @@ function createWritableSignal<T>(value: T) {
   // Used in h/nodeProperty.ts
   ws.$o = 1 as const;
   ws.cs = new Set();
-  ws.csRun = undefined;
   // The 'not set' value must be unique so `nullish` can be set in a transaction
   ws.pending = EMPTY_ARR;
 
