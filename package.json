@@ -15,7 +15,8 @@
     "build": "npm run build:h && npm run build:s && npm run build:index",
     "build:h": "esbuild --bundle src/h/index.ts --outfile=publish/h/index.js --format=esm --minify --sourcemap",
     "build:s": "esbuild --bundle src/s/index.ts --outfile=publish/s/index.js --format=esm --minify --sourcemap",
-    "build:index": "esbuild src/index.ts --outfile=publish/index.js --format=esm --minify --sourcemap"
+    "build:index": "esbuild src/index.ts --outfile=publish/index.js --format=esm --minify --sourcemap",
+    "size": "esbuild src/index.ts --bundle --format=esm --minify | gzip -9 | wc -c"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.3.0",
