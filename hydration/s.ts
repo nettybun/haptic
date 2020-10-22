@@ -1,4 +1,4 @@
-import { signal, computed } from '../s/index.js';
+import { signal, computed } from '../src/s/index.js';
 
 const signalCounts = new Map<string, number>();
 const base = typeof window !== 'undefined'

@@ -1,12 +1,15 @@
+import { signal, computed } from '../src/s/index.js';
+import { when } from '../src/h/util/when.js';
+
 // type Fn = () => unknown
 // Using string for now but really this will be functions for hydration?
 type El = { tag: string, content: (El | string)[] } | undefined;
 type Component = (...args: unknown[]) => El;
 
 // These always return the same function body
-const whenStr = ''; // when().toString()
-const signalStr = ''; // signal().toString()
-const computedStr = ''; // computed(() => {}).toString()
+const whenStr = when(() => '', {}).toString();
+const signalStr = signal('').toString();
+const computedStr = computed(() => {}).toString();
 
 function funcString(arg: () => unknown): string {
   const str = arg.toString();
