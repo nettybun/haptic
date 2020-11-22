@@ -10,7 +10,7 @@ declare namespace h {
     namespace JSX {
         type MaybeSignal<T> = T | Signal<T>;
         type AllowSignal<Props> = { [K in keyof Props]: MaybeSignal<Props[K]>; };
-        type Element = HTMLElement;
+        type Element = HTMLElement | SVGElement | DocumentFragment;
         interface ElementAttributesProperty {
             props: unknown;
         }

@@ -66,7 +66,7 @@ export { h };
 // JSX namespace must be bound into a function() next to its definition
 declare namespace h {
   export namespace JSX {
-    type Element = HTMLElement;
+    type Element = HTMLElement | SVGElement | DocumentFragment;
 
     interface ElementAttributesProperty { props: unknown; }
     interface ElementChildrenAttribute { children: unknown; }

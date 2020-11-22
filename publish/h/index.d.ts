@@ -5,7 +5,7 @@ type Component = (...args: unknown[]) => El;
 declare function h(tag?: string | [] | Component, props?: unknown, ...children: unknown[]): El;
 declare namespace h {
     namespace JSX {
-        type Element = HTMLElement;
+        type Element = HTMLElement | SVGElement | DocumentFragment;
         interface ElementAttributesProperty {
             props: unknown;
         }
