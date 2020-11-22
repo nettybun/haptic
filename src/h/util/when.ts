@@ -9,18 +9,25 @@ const when = <T extends string>(
   views: { [k in T]?: Component }
 ): () => El => {
   const rendered: { [k in string]?: El } = {};
+  let currentCond: string | undefined = undefined;
   return () => {
-    const cond = condition();
-    if (!rendered[cond] && views[cond]) {
+    const nextCond = condition();
+    if (currentCond !== nextCond) {
+      // TODO: Disable the subscriptions
+      // Well... `capture` will have csNested of all those? Then set lazy = true
+      // Retrieve all deep csNested though? How deep...
+      currentCond = nextCond;
+    }
+    if (!rendered[nextCond] && views[nextCond]) {
       // sample() prevents signals in the component from linking to this when()
       // block; only condition() should be linked here. Without sample() there's
       // no visible DOM reactivity.
 
       // h() supports sinuous-trace which requires mountpoints to maintain
       // records of their children elements.
-      rendered[cond] = api.sample(() => h(views[cond] as Component));
+      rendered[nextCond] = api.sample(() => h(views[nextCond] as Component));
     }
-    return rendered[cond];
+    return rendered[nextCond];
   };
 };
 
