@@ -11,6 +11,7 @@ declare type WritableSignal<T> = Base<T> & {
     pending: T | [];
 };
 declare type ComputedSignal<T> = Base<T> & {
+    lazy: boolean;
     stale: boolean;
     ws: WritableSignal<X>[];
     csNested: ComputedSignal<X>[];

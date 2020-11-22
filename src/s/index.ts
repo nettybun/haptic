@@ -29,6 +29,9 @@ type WritableSignal<T> = Base<T> & {
 }
 
 type ComputedSignal<T> = Base<T> & {
+  // WIP: Works but with bugs. May be fundamentally flawed since subscriptions
+  // cannot receive signals from cs that have never ran...
+  lazy: boolean
   stale: boolean
   ws: WritableSignal<X>[]
   csNested: ComputedSignal<X>[]
@@ -71,7 +74,7 @@ function createWritableSignal<T>(value: T) {
     // Update can alter signal.observers so make a copy before running
     ws.csRun = new Set(ws.cs);
     ws.csRun.forEach(c => { c.stale = true; });
-    ws.csRun.forEach(c => { if (c.stale) c(); });
+    ws.csRun.forEach(c => { if (c.stale && !c.lazy) c(); });
 
     runningComputed = prevComputed;
     return value;
@@ -90,38 +93,52 @@ function createComputedSignal<F extends Fn, T = ReturnType<F>>(updateFn: F) {
   const cs: ComputedSignal<T> = () => {
     if (!cs.stale) {
       if (runningComputed) {
-        // If inside a running computed, pass this computed's signals to it
+        // If being read as part of another computed's updateFn(), link our
+        // signals to it. This is for subscriptions (non-lazy cs).
+
+        // Let's say a sub uses a cs (lazy) which internally depends on wses. If
+        // one of these ws is written, the cs is marked as stale. However, the
+        // sub has no reason to run, even though the cs may have changed. To fix
+        // this, ws links are passed upstream to subs. They'll run automatically
+        // for any ws in their tree, calling their cses.
         cs.ws.forEach(ws => { ws(); });
       }
       return value;
     }
 
     // Stale, so update the value
-    const prevComputed = runningComputed;
-    if (prevComputed) {
-      prevComputed.csNested.push(cs);
+    if (runningComputed) {
+      runningComputed.csNested.push(cs);
     }
+    const prevComputed = runningComputed;
+    runningComputed = cs;
     unsubscribe(cs);
     cs.stale = false;
-    runningComputed = cs;
     value = updateFn() as T;
     runningComputed = prevComputed;
+    // XXX: Lazy init breaks subscriptions ohnooo
+    // Because the signals aren't passed up since they don't yet exist...
+    if (prevComputed) {
+      cs.ws.forEach(ws => { ws(); });
+    }
 
     return value;
   };
   // Used in h/nodeProperty.ts
   cs.$o = 1 as const;
+  cs.lazy = true;
   cs.stale = true;
   cs.ws = [];
   cs.csNested = [];
-  // Lazy eval would be nice but h() needs this to work correctly
-  cs();
   return cs;
 }
 
 // In Sinuous `fn` gains a new property, but I don't agree with that...
+// TODO: This is autorun each change unlike computed() which is lazy
 function subscribe(fn: Fn) {
   const cs = createComputedSignal(fn);
+  cs.lazy = false;
+  cs();
   return () => unsubscribe(cs);
 }
 
@@ -176,14 +193,17 @@ function sample<T>(fn: () => T): T {
   return value;
 }
 
+// Subcription that only updates on the given signals
+// TODO: Build this into subscribe()?
 function on(signals: Signal<X>[], fn: Fn, options = { onlyChanges: false }) {
-  return createComputedSignal(() => {
-    signals.forEach(signal => { signal(); });
-    let value;
-    if (options.onlyChanges) value = sample(fn);
-    options.onlyChanges = false;
-    return value;
-  });
+  const cs = createComputedSignal(fn);
+  cs.lazy = false;
+  const prev = runningComputed;
+  runningComputed = cs;
+  signals.forEach(signal => { signal(); });
+  runningComputed = prev;
+  if (!options.onlyChanges) cs();
+  return () => unsubscribe(cs);
 }
 
 // Types
