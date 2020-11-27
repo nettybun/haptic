@@ -180,7 +180,7 @@ function on(signals: Signal<X>[], fn: Fn, options = { onlyChanges: false }) {
   return createComputedSignal(() => {
     signals.forEach(signal => { signal(); });
     let value;
-    if (options.onlyChanges) value = sample(fn);
+    if (!options.onlyChanges) value = sample(fn);
     options.onlyChanges = false;
     return value;
   });
