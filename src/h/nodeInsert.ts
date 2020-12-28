@@ -1,6 +1,7 @@
 import { api } from './index.js';
 
-type Frag = { _startMark: Text }
+type Frag = { _startMark: Text };
+type Fn = (...args: unknown[]) => unknown;
 
 /** Insert a node into an existing node */
 const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag, startNode?: ChildNode | null) => {
@@ -41,8 +42,9 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
     current = value;
   }
   else if (typeof value === 'function') {
-    api.subscribe(() => {
-      current = api.insert(el, (value as () => unknown).call({ el, endMark }), endMark, current, startNode);
+    // Bug in TypeScript? value is unknown...
+    api.reactiveFn((...args) => {
+      current = api.insert(el, (value as Fn)(...args), endMark, current, startNode);
     });
   }
   else {
@@ -57,7 +59,7 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
               && (current as Frag)._startMark.nextSibling
           ) || endMark.previousSibling;
         }
-        api.rm(el, startNode, endMark);
+        api.remove(el, startNode, endMark);
       }
     } else {
       el.textContent = '';

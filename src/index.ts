@@ -18,7 +18,6 @@ import { when } from './u/when.js';
 import type { Vocal } from './v';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
-// TODO: How?
 api.reactiveFn = rx;
 
 export { h, api, svg, when };

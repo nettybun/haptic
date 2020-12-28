@@ -1,8 +1,8 @@
 import { api } from './index.js';
 
-type Value = Node | string | number
-type Frag = { _startMark: Text }
-type FragReturn = Frag | Node | undefined
+type Value = Node | string | number;
+type Frag = { _startMark: Text };
+type FragReturn = Frag | Node | undefined;
 
 const asNode = (value: unknown): Text | Node | DocumentFragment => {
   if (typeof value === 'string') {

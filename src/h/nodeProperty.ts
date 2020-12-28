@@ -1,8 +1,8 @@
 import { api } from './index.js';
 
-type EventHandler = (ev: Event) => unknown
+type EventHandler = (ev: Event) => unknown;
 // Similar to $o for observable, this is an indicator that events are attached
-type NodeEvented = Node & { $l?: { [name: string]: EventHandler } }
+type NodeEvented = Node & { $l?: { [name: string]: EventHandler } };
 
 function eventProxy(this: NodeEvented, e: Event) {
   // eslint-disable-next-line no-invalid-this
@@ -40,8 +40,9 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
     handleEvent(el, name, value as EventHandler);
   }
   else if (typeof value === 'function') {
-    api.subscribe(() => {
-      api.property(el, value.call({ el, name }), name, isAttr, isCss);
+    // No bug in TypeScript? (see nodeInsert.ts)
+    api.reactiveFn((...args) => {
+      api.property(el, value(...args), name, isAttr, isCss);
     });
   }
   else if (isCss) {

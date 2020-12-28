@@ -1,8 +1,6 @@
 import { api } from './index.js';
 
-import type {
-  GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements
-} from '../jsx';
+import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from '../jsx';
 
 type El = Element | Node | DocumentFragment | undefined;
 type Component = (...args: unknown[]) => El;

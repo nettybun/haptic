@@ -16,6 +16,8 @@ const api = {
   insert,
   property,
   remove,
+  // Reactivity callback; could be haptic/v, sinuous/observable, mobx, etc
+  reactiveFn: (_: (...args: unknown[]) => unknown) => {},
 };
 
 // Reference the latest internal h() allowing others to customize the call
