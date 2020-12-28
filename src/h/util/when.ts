@@ -1,26 +1,39 @@
-import { h, api } from '../index.js';
+import { h } from '../index.js';
+
+import { rx, adopt } from '../../v/index.js';
+import type { Rx, SubscribeVocal } from '../../v/index.js';
 
 type El = Element | Node | DocumentFragment | undefined;
 type Component = (...args: unknown[]) => El;
 
 /** For switching content when `condition` contains a signal/observer */
 const when = <T extends string>(
-  condition: () => T,
+  condition: (s: SubscribeVocal<unknown>) => T,
   views: { [k in T]?: Component }
-): () => El => {
-  const rendered: { [k in string]?: El } = {};
-  return () => {
-    const cond = condition();
-    if (!rendered[cond] && views[cond]) {
-      // sample() prevents signals in the component from linking to this when()
-      // block; only condition() should be linked here. Without sample() there's
-      // no visible DOM reactivity.
-
-      // h() supports sinuous-trace which requires mountpoints to maintain
-      // records of their children elements.
-      rendered[cond] = api.sample(() => h(views[cond] as Component));
+): (s: SubscribeVocal<unknown>) => El => {
+  const renderedEl = {} as { [k in T]: El };
+  const renderedRx = {} as { [k in T]: Rx };
+  let condActive: T;
+  return s => {
+    const cond = condition(s);
+    if (cond === condActive) {
+      return renderedEl[cond];
     }
-    return rendered[cond];
+    // Tick. Pause reactions. Keep DOM intact.
+    renderedRx[condActive].pause();
+    condActive = cond;
+    // Rendered? Then Unpause. If nothing has changed then no sr/pr links change
+    if (renderedEl[cond]) {
+      renderedRx[cond]();
+      return renderedEl[cond];
+    }
+    // Able to render?
+    if (views[cond]) {
+      const parent = rx(() => {});
+      renderedEl[cond] = adopt(parent, () => h(views[cond]));
+      renderedRx[cond] = parent;
+      return renderedEl[cond];
+    }
   };
 };
 
