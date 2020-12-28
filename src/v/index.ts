@@ -12,7 +12,7 @@ type Rx = {
   (): undefined;
   // ID "rx-14-methodName" or "rx-10-"
   id: string;
-  fn: <T>(s: (v: Vocal<T>) => T) => unknown;
+  fn: <T>(s: SubscribeVocal<T>) => unknown;
   sr: Set<Vocal<X>>;
   pr: Set<Vocal<X>>;
   inner: Set<Rx>;
@@ -36,6 +36,8 @@ type Vocal<T> = {
   // This property doesn't exist some of the time
   next?: T;
 }
+
+type SubscribeVocal<T> = (v: Vocal<T>) => T;
 
 let vocalId = 0;
 let reactionId = 0;
@@ -171,7 +173,7 @@ const vocalsCreate = <T>(o: { [k:string]: T }): { [k:string]: Vocal<T> } => {
   return (o as unknown as { [k:string]: Vocal<T> });
 };
 
-const transaction = (fn: Fn) => {
+const transaction = <T>(fn: () => T): T => {
   const prev = transactionBatch;
   transactionBatch = new Set();
   let error: unknown;
@@ -188,10 +190,10 @@ const transaction = (fn: Fn) => {
     v(v.next);
     delete v.next;
   });
-  return value;
+  return value as T;
 };
 
-const adopt = (rxParent: Rx, fn: Fn) => {
+const adopt = <T>(rxParent: Rx, fn: () => T): T => {
   const prev = rxActive;
   rxActive = rxParent;
   let error: unknown;
@@ -203,7 +205,9 @@ const adopt = (rxParent: Rx, fn: Fn) => {
   }
   rxActive = prev;
   if (error) throw error;
-  return value;
+  return value as T;
 };
 
 export { rxCreate as rx, vocalsCreate as vocals, transaction, adopt, rxTree };
+// Types
+export { Rx, Vocal, SubscribeVocal };
