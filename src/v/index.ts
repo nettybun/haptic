@@ -1,9 +1,11 @@
-/*
-  eslint-disable
-  @typescript-eslint/no-explicit-any,
-  prefer-destructuring,
-  no-multi-spaces
-*/
+// Vocal
+
+// Reactivity engine for Haptic. This replaces haptic/s' "Signal" implementation
+// of the Observer Pattern architecture and was designed to remove some pitfalls
+// when writing reactive code. There's a lot more code but after a lot of code
+// golf it's only slightly larger min+gzipped at v: 660 bytes; s: 548 bytes.
+
+/* eslint-disable @typescript-eslint/no-explicit-any,prefer-destructuring,no-multi-spaces */
 
 type X = any;
 type Fn = () => unknown;
