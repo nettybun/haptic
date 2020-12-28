@@ -16,24 +16,21 @@ const when = <T extends string>(
   let condActive: T;
   return s => {
     const cond = condition(s);
-    if (cond === condActive) {
-      return renderedEl[cond];
-    }
-    // Tick. Pause reactions. Keep DOM intact.
-    renderedRx[condActive].pause();
-    condActive = cond;
-    // Rendered? Then Unpause. If nothing has changed then no sr/pr links change
-    if (renderedEl[cond]) {
-      renderedRx[cond]();
-      return renderedEl[cond];
-    }
-    // Able to render?
-    if (views[cond]) {
+    if (cond !== condActive && views[cond]) {
+      // Tick. Pause reactions. Keep DOM intact.
+      renderedRx[condActive].pause();
+      condActive = cond;
+      // Rendered?
+      if (renderedEl[cond]) {
+        // Then unpause. If nothing has changed then no sr/pr links change
+        renderedRx[cond]();
+      }
+      // Able to render?
       const parent = rx(() => {});
       renderedEl[cond] = adopt(parent, () => h(views[cond]));
       renderedRx[cond] = parent;
-      return renderedEl[cond];
     }
+    return renderedEl[cond];
   };
 };
 
