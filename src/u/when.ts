@@ -1,16 +1,16 @@
-import { h } from '../index.js';
+import { h } from '../h/index.js';
 
-import { rx, adopt } from '../../v/index.js';
-import type { Rx, SubscribeVocal } from '../../v/index.js';
+import { rx, adopt } from '../v/index.js';
+import type { Rx, VocalSubscriber } from '../v/index.js';
 
 type El = Element | Node | DocumentFragment | undefined;
 type Component = (...args: unknown[]) => El;
 
 /** For switching content when `condition` contains a signal/observer */
 const when = <T extends string>(
-  condition: (s: SubscribeVocal<unknown>) => T,
+  condition: (s: VocalSubscriber) => T,
   views: { [k in T]?: Component }
-): (s: SubscribeVocal<unknown>) => El => {
+): (s: VocalSubscriber) => El => {
   const renderedEl = {} as { [k in T]: El };
   const renderedRx = {} as { [k in T]: Rx };
   let condActive: T;
