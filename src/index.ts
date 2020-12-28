@@ -10,21 +10,23 @@
 // was imported instead, the JSX definitions wouldn't support haptic/s
 
 import { rx } from './v';
-import { h, api, svg, when } from './h';
+import { h, api } from './h';
 
-import type { Signal } from './s';
-import type {
-  GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements
-} from './jsx';
+import { svg } from './u/svg.js';
+import { when } from './u/when.js';
 
-api.subscribe = rx;
+import type { Vocal } from './v';
+import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
+
+// TODO: How?
+api.reactiveFn = rx;
 
 export { h, api, svg, when };
 
 declare namespace h {
   export namespace JSX {
-    type MaybeSignal<T> = T | Signal<T>;
-    type AllowSignal<Props> = { [K in keyof Props]: MaybeSignal<Props[K]> };
+    type MaybeVocal<T> = T | Vocal<T>;
+    type AllowVocal<Props> = { [K in keyof Props]: MaybeVocal<Props[K]> };
 
     type Element = HTMLElement | SVGElement | DocumentFragment;
 
@@ -37,18 +39,18 @@ declare namespace h {
     // Allow children on all DOM elements (not components, see above)
     // ESLint will error for children on void elements like <img/>
     type DOMAttributes<Target extends EventTarget>
-      = AllowSignal<GenericEventAttrs<Target>> & { children?: unknown };
+      = AllowVocal<GenericEventAttrs<Target>> & { children?: unknown };
 
     type HTMLAttributes<Target extends EventTarget>
-      = AllowSignal<Omit<HTMLAttrs, 'style'>>
+      = AllowVocal<Omit<HTMLAttrs, 'style'>>
         & { style?:
-            | MaybeSignal<string>
-            | { [key: string]: MaybeSignal<string | number> };
+            | MaybeVocal<string>
+            | { [key: string]: MaybeVocal<string | number> };
           }
         & DOMAttributes<Target>;
 
     type SVGAttributes<Target extends EventTarget>
-      = AllowSignal<SVGAttrs> & HTMLAttributes<Target>;
+      = AllowVocal<SVGAttrs> & HTMLAttributes<Target>;
 
     type IntrinsicElements =
       & { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>; }

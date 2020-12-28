@@ -12,7 +12,7 @@ type Rx = {
   (): undefined;
   // ID "rx-14-methodName" or "rx-10-"
   id: string;
-  fn: <T>(s: SubscribeVocal<T>) => unknown;
+  fn: (s: VocalSubscriber) => unknown;
   sr: Set<Vocal<X>>;
   pr: Set<Vocal<X>>;
   inner: Set<Rx>;
@@ -37,7 +37,7 @@ type Vocal<T> = {
   next?: T;
 }
 
-type SubscribeVocal<T> = (v: Vocal<T>) => T;
+type VocalSubscriber = <T = X>(v: Vocal<T>) => T;
 
 let vocalId = 0;
 let reactionId = 0;
@@ -210,4 +210,4 @@ const adopt = <T>(rxParent: Rx, fn: () => T): T => {
 
 export { rxCreate as rx, vocalsCreate as vocals, transaction, adopt, rxTree };
 // Types
-export { Rx, Vocal, SubscribeVocal };
+export { Rx, Vocal, VocalSubscriber };
