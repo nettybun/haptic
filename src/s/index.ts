@@ -4,7 +4,7 @@
 // from Sinuous. The architecture contains subjects and observers. Sinuous
 // describes these as "Observables", despite the term already being used in the
 // JS ecosystem to refer to stream-focused generator-like architectures. To
-// avoid confusion this uses "Signals", which comes from the Solid framework.
+// avoid confusion this uses "Signals", which is used in Solid/S.js/Reactor.js.
 
 // The API exports two types of signals. WritableSignal is a read-write data
 // store that updates only when written directly. Each one maintains a list of
