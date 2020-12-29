@@ -1,7 +1,7 @@
-import { h } from '../h/index.js';
+import { h } from '../h';
 
-import { rx, adopt } from '../v/index.js';
-import type { Rx, VocalSubscriber } from '../v/index.js';
+import { rx, adopt } from '../v';
+import type { Rx, VocalSubscriber } from '../v';
 
 type El = Element | Node | DocumentFragment | undefined;
 type Component = (...args: unknown[]) => El;

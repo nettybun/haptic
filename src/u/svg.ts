@@ -1,4 +1,4 @@
-import { api } from '../h/index.js';
+import { api } from '../h';
 
 /** Renders SVGs by setting h() to the SVG namespace */
 const svg = <T extends () => Element>(closure: T): ReturnType<T> => {
