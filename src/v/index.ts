@@ -19,6 +19,7 @@ type Rx = {
   pr: Set<Vocal<X>>;
   inner: Set<Rx>;
   runs: number;
+  depth: number;
   state:
     | typeof STATE_ON
     | typeof STATE_RUNNING
@@ -68,6 +69,7 @@ const rxCreate = (fn: Fn): Rx => {
   rx.id = `rx-${reactionId++}-${fn.name}`;
   rx.fn = fn;
   rx.runs = 0;
+  rx.depth = rxActive ? rxActive.depth + 1 : 0;
   rx.pause = () => _rxPause(rx);
   rx.unsubscribe = () => _rxUnsubscribe(rx);
   rxTree.set(rx, rxActive); // Maybe undefined; that's fine
@@ -151,20 +153,14 @@ const vocalsCreate = <T>(o: { [k:string]: T }): { [k:string]: Vocal<T> } => {
         return;
       }
       saved = args[0];
-      // Duplicate the set else it's an infinite loop...
-      const toRun = new Set(vocal.rx);
+      // Duplicate into an array else it's an infinite loop...
+      // Sinuous uses a Set() with their unsubscribe() removing expired children
+      // as it goes. I need order though. Plus, deleting from arrays is costly
+      const toRun = [...vocal.rx].sort((a, b) => a.depth - b.depth);
+      // Ordered by parent->child
       toRun.forEach(rx => {
-        // Calls are ordered by parent->child
-        const rxParent = rxTree.get(rx);
-        if (rxParent && toRun.has(rxParent)) {
-          // Parent has unsubscribed/removed this rx (rx.state === STATE_OFF)
-          rx = rxParent;
-        }
-        if (rx.state === STATE_PAUSED) {
-          rx.state = STATE_PAUSED_STALE;
-        } else {
-          _rxRun(rx);
-        }
+        if (rx.state === STATE_PAUSED) rx.state = STATE_PAUSED_STALE;
+        else if (rx.state === STATE_ON) _rxRun(rx);
       });
       // Boxes don't return the value on write, unlike Sinuous/S.js
     }) as Vocal<T>;
