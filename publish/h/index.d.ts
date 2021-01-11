@@ -37,14 +37,7 @@ declare const api: {
     insert: (el: Node, value: unknown, endMark?: Node, current?: Node | Frag, startNode?: ChildNode | null) => Node | Frag | undefined;
     property: (el: Node, value: unknown, name: string | null, isAttr?: boolean, isCss?: boolean) => void;
     rm: (parent: Node, startNode: ChildNode | null, endMark: Node) => void;
-    sample: <T>(fn: () => T) => T;
-    subscribe: <T>(fn: () => T) => void;
+    rx: (_: (...args: unknown[]) => unknown) => unknown;
 };
 
-/** Renders SVGs by setting h() to the SVG namespace */
-declare const svg: <T extends () => Element>(closure: T) => ReturnType<T>;
-
-/** For switching content when `condition` contains a signal/observer */
-declare const when: <T extends string>(condition: () => T, views: { [k in T]?: Component | undefined; }) => () => El;
-
-export { h, api, svg, when };
+export { h, api };
