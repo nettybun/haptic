@@ -41,7 +41,7 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
   }
   else if (typeof value === 'function') {
     // No bug in TypeScript? (see nodeInsert.ts)
-    api.reactiveFn((...args) => {
+    api.rx((...args) => {
       api.property(el, value(...args), name, isAttr, isCss);
     });
   }

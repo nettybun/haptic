@@ -43,7 +43,7 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
   }
   else if (typeof value === 'function') {
     // Bug in TypeScript? value is unknown...
-    api.reactiveFn((...args) => {
+    api.rx((...args) => {
       current = api.insert(el, (value as Fn)(...args), endMark, current, startNode);
     });
   }
