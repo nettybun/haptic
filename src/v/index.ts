@@ -3,7 +3,7 @@
 // Reactivity engine for Haptic. This replaces haptic/s' "Signal" implementation
 // of the Observer Pattern architecture and was designed to remove some pitfalls
 // when writing reactive code. There's a lot more code but after a lot of code
-// golf it's only slightly larger min+gzipped at v: 660 bytes; s: 548 bytes.
+// golf it's only slightly larger min+gzipped at v: 680 bytes; s: 548 bytes.
 
 /* eslint-disable @typescript-eslint/no-explicit-any,prefer-destructuring,no-multi-spaces */
 
@@ -33,7 +33,7 @@ type Rx = {
 type Vocal<T> = {
   (): T;
   (value: T): void;
-  // ID "rx-14-methodName" or "rx-10-"
+  // ID "v-14-methodName" or "v-10-"
   id: string;
   rx: Set<Rx>;
   // This property doesn't exist some of the time
@@ -52,8 +52,8 @@ let sRead: boolean;
 // Vocals written to during a transaction(() => {...})
 let transactionBatch: Set<Vocal<X>> | undefined;
 
-// Registry of reaction parents (and therefore all known reactions)
-const rxTree = new WeakMap<Rx, Rx | undefined>();
+// Registry of reactions
+const rxKnown = new Set<Rx>();
 
 // Unique value to compare with `===` since Symbol() doesn't gzip well
 const STATE_ON           = [] as const;
@@ -72,7 +72,7 @@ const rxCreate = (fn: Fn): Rx => {
   rx.depth = rxActive ? rxActive.depth + 1 : 0;
   rx.pause = () => _rxPause(rx);
   rx.unsubscribe = () => _rxUnsubscribe(rx);
-  rxTree.set(rx, rxActive); // Maybe undefined; that's fine
+  rxKnown.add(rx);
   if (rxActive) rxActive.inner.add(rx);
   rx();
   return rx;
@@ -119,6 +119,7 @@ const _rxUnsubscribe = (rx: Rx): void => {
     // These are only defined once the reaction has been setup and run before
     rx.inner.forEach(_rxUnsubscribe);
     rx.sr.forEach(v => v.rx.delete(rx));
+    // TODO: rx.srRunList? delete? Is what Sinuous does and I can see why now...
   }
   rx.sr = new Set();
   rx.pr = new Set();
@@ -206,6 +207,12 @@ const adopt = <T>(rxParent: Rx, fn: () => T): T => {
   return value as T;
 };
 
-export { rxCreate as rx, vocalsCreate as vocals, transaction, adopt, rxTree };
+// Side effect to support Haptic in a browser?
+// TODO: Alternative is to have rx be an import on the 'haptic' bundle directly
+
+// @ts-ignore
+window.haptic = { rx: rxCreate, adopt };
+
+export { rxCreate as rx, vocalsCreate as vocals, transaction, adopt, rxKnown };
 // Types
 export { Rx, Vocal, VocalSubscriber };
