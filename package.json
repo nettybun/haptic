@@ -12,11 +12,10 @@
     "url": "https://gitlab.com/nthm/haptic"
   },
   "scripts": {
-    "build": "npm run build:h && npm run build:s && npm run build:v && npm run build:index",
+    "build": "npm run build:h && npm run build:v && npm run build:index",
     "build:h": "esbuild --bundle src/h/index.ts --outfile=publish/h/index.js --format=esm --minify --sourcemap",
-    "build:s": "esbuild --bundle src/s/index.ts --outfile=publish/s/index.js --format=esm --minify --sourcemap",
     "build:v": "esbuild --bundle src/v/index.ts --outfile=publish/v/index.js --format=esm --minify --sourcemap",
-    "build:index": "node build.js",
+    "build:index": "esbuild --bundle src/index.ts --outfile=publish/index.js --format=esm --minify --sourcemap",
     "size": "echo $(esbuild --bundle src/index.ts --format=esm --minify | gzip -9 | wc -c) min+gzip bytes"
   },
   "devDependencies": {
