@@ -12,11 +12,9 @@
     "url": "https://gitlab.com/nthm/haptic"
   },
   "scripts": {
-    "build": "npm run build:h && npm run build:v && npm run build:index",
-    "build:h": "esbuild --bundle src/h/index.ts --outfile=publish/h/index.js --format=esm --minify --sourcemap",
-    "build:v": "esbuild --bundle src/v/index.ts --outfile=publish/v/index.js --format=esm --minify --sourcemap",
-    "build:index": "esbuild --bundle src/index.ts --outfile=publish/index.js --format=esm --minify --sourcemap",
-    "size": "echo $(esbuild --bundle src/index.ts --format=esm --minify | gzip -9 | wc -c) min+gzip bytes"
+    "build": "node build.js",
+    "size:each": "cd publish; find . -name 'index.js' | xargs -I @ bash -c 'printf \"%15s | %5s min+gzip bytes\n\" @ \"$(cat @ | gzip -9 | wc -c)\"'",
+    "size:bundle": "echo $(esbuild --bundle src/index.ts --format=esm --minify | gzip -9 | wc -c) min+gzip bytes"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.11.1",

@@ -4,12 +4,16 @@
 // import { h } from 'haptic';
 // import { vocals, rx } from 'haptic/v';
 
-// This bundles two utilities, svg and when, and extends the JSX namespace to
+// This bundles 2 utilities, svg() and when(), and extends the JSX namespace to
 // allow using Vocal and Rx types in JSX. Import haptic/h to use a vanilla JSX
 // namespace or to use other reactivity libraries such as sinuous/observable,
-// haptic/s, hyperactiv, or mobx.
+// haptic/s, hyperactiv, or mobx
 
-// TODO: Read haptic/s for ESM-related single instancing of globals...
+// The 'haptic' package as a bundle doesn't embed haptic/v, so code will only be
+// loaded once despite having two import sites. This should work well for both
+// bundlers and unbundled (ESM-only; Snowpack/UNPKG) workflows. It's important
+// to only run one instance of haptic/v because reactivity depends on accessing
+// some shared global state that is setup during import.
 
 import { h, api } from './h';
 import { rx, adopt } from './v';
@@ -20,11 +24,6 @@ import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements 
 type El = Element | Node | DocumentFragment | undefined;
 type Component = (...args: unknown[]) => El;
 
-// Expects haptic/v to have setup up globally on window?
-// -- api.rx = (...args) => window.haptic.rx(...args);
-
-// TODO: This doesn't work? Importing haptic/v separately will use different
-// variables for rxActive, rx.id counters, etc. It has to be the same...
 api.rx = rx;
 
 /** Utility: Renders SVGs by setting h() to the SVG namespace */
@@ -57,7 +56,6 @@ const when = <T extends string>(
       }
       // Able to render?
       const parent = rx(() => {});
-      // TODO: ESM vs window globalThis to access correct rxActive?
       renderedEl[cond] = adopt(parent, () => h(views[cond]));
       renderedRx[cond] = parent;
     }
