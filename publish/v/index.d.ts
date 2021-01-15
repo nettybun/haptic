@@ -39,7 +39,7 @@ declare const STATE_PAUSED_STALE: readonly [];
 declare const STATE_OFF:          readonly [];
 
 declare function rxCreate(fn: Fn): Rx;
-declare function vocalsCreate<T>(o: { [k: string]: T; }): { [k: string]: Vocal<T>; };
+declare function vocalsCreate<T>(o: T): { [P in keyof T]: Vocal<T[P]>; };
 declare function transaction<T>(fn: () => T): T;
 declare function adopt<T>(rxParent: Rx, fn: () => T): T;
 
