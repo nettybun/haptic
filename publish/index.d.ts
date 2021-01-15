@@ -1,5 +1,5 @@
 import { api as _api } from './h';
-import type { Vocal, VocalSubscriber } from './v';
+import type { VocalSubscriber } from './v';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
 type El = Element | Node | DocumentFragment | undefined;
@@ -14,7 +14,7 @@ declare const when: <T extends string>(condition: (s: VocalSubscriber) => T, vie
 declare function h(tag?: string | [] | Component, props?: unknown, ...children: unknown[]): El;
 declare namespace h {
     export namespace JSX {
-        type MaybeVocal<T> = T | Vocal<T>;
+        type MaybeVocal<T> = T | ((s: VocalSubscriber) => T);
         type AllowVocal<Props> = { [K in keyof Props]: MaybeVocal<Props[K]> };
         type Element = HTMLElement | SVGElement | DocumentFragment;
 
