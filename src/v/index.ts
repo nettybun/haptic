@@ -1,9 +1,35 @@
 // Vocal
 
-// Reactivity engine for Haptic. This replaces haptic/s' "Signal" implementation
-// of the Observer Pattern architecture and was designed to remove some pitfalls
-// when writing reactive code. There's a lot more code but after a lot of code
-// golf it's only slightly larger min+gzipped at v: 680 bytes; s: 548 bytes.
+// Reactivity engine for Haptic. This replaces haptic/s' "signal" implementation
+// of the "observer pattern" and is now designed to remove some pitfalls of
+// writing reactive code. There's a lot more code but after a lot of code golf
+// it's only slightly larger min+gzipped at v: 680 bytes; s: 548 bytes.
+
+// In haptic/s, like Sinuous/S.js, subscriptions are created implicitly when a
+// signal is read. You needed to know ahead of time if a function was safe to
+// call during a computed() or if a sample() wrapper will be needed to avoid
+// accidental subscriptions. This meant it was too easy setup signals in an
+// infinite loop; which is hard to debug since the browser locks up. If an error
+// was thrown in a computed then system state was broken and future work calls
+// were wrong. Lastly, it's confusing how to differentiate between signals,
+// computeds, and subscriptions.
+
+// In haptic/v, subscriptions are explicit via `s => s(...)`. Nested functions
+// are then also explicit since they can only create subscriptions if they're
+// passed an `s` as a parameter. Reactive code is run in try/catch blocks to
+// keep the system recoverable. There's only values and reactions; they're
+// also unambiguous since reactions can't store data but values can. You can't
+// loop a reaction - it'll throw.
+
+// There's the usual support for transactions and for re-parenting nested
+// reactions (as `adopt` instead of `root`).
+
+// New features: Reactions can pause without undoing subscriptions; which is
+// useful to efficiently skip DOM updates for any elements that are off-screen.
+// There's a push to help inspecting/debugging: (1) There's an ID on values and
+// reactions, which is used error messages. (2) Reactions are stored in a global
+// registry. (3) Reactions track how many times they've ran. (4) Reactions are
+// implemented as state machines.
 
 /* eslint-disable @typescript-eslint/no-explicit-any,prefer-destructuring,no-multi-spaces */
 
@@ -207,12 +233,5 @@ const adopt = <T>(rxParent: Rx, fn: () => T): T => {
   return value as T;
 };
 
-// Side effect to support Haptic in a browser?
-// TODO: Alternative is to have rx be an import on the 'haptic' bundle directly
-
-// @ts-ignore
-window.haptic = { rx: rxCreate, adopt };
-
 export { rxCreate as rx, vocalsCreate as vocals, transaction, adopt, rxKnown };
-// Types
-export { Rx, Vocal, VocalSubscriber };
+export type { Rx, Vocal, VocalSubscriber };
