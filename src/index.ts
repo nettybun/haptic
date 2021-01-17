@@ -18,7 +18,7 @@
 import { h, api } from './h';
 import { rx, adopt } from './v';
 
-import type { Rx, Vocal, VocalSubscriber } from './v';
+import type { Rx, VocalSubscriber } from './v';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
 type El = Element | Node | DocumentFragment | undefined;
