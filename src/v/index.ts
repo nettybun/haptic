@@ -36,6 +36,13 @@
 type X = any;
 type Fn = () => unknown;
 
+type RxState =
+  | typeof STATE_ON
+  | typeof STATE_RUNNING
+  | typeof STATE_PAUSED
+  | typeof STATE_PAUSED_STALE
+  | typeof STATE_OFF;
+
 type Rx = {
   (): undefined;
   // ID "rx-14-methodName" or "rx-10-"
@@ -46,12 +53,7 @@ type Rx = {
   inner: Set<Rx>;
   runs: number;
   depth: number;
-  state:
-    | typeof STATE_ON
-    | typeof STATE_RUNNING
-    | typeof STATE_PAUSED
-    | typeof STATE_PAUSED_STALE
-    | typeof STATE_OFF;
+  state: RxState;
   pause: () => void;
   unsubscribe: () => void;
 }
@@ -87,6 +89,15 @@ const STATE_RUNNING      = [] as const;
 const STATE_PAUSED       = [] as const;
 const STATE_PAUSED_STALE = [] as const;
 const STATE_OFF          = [] as const;
+
+// Tree-shaken: Not part of your bundle unless you import it for debugging
+const rxStates = new Map<RxState, string>([
+  [STATE_ON,           'STATE_ON'          ],
+  [STATE_RUNNING,      'STATE_RUNNING'     ],
+  [STATE_PAUSED,       'STATE_PAUSED'      ],
+  [STATE_PAUSED_STALE, 'STATE_PAUSED_STALE'],
+  [STATE_OFF,          'STATE_OFF'         ],
+]);
 
 const rxCreate = (fn: Fn): Rx => {
   // Ignore needed since sr,pr,inner are setup by _rxUnsubscribe()
@@ -145,7 +156,6 @@ const _rxUnsubscribe = (rx: Rx): void => {
     // These are only defined once the reaction has been setup and run before
     rx.inner.forEach(_rxUnsubscribe);
     rx.sr.forEach(v => v.rx.delete(rx));
-    // TODO: rx.srRunList? delete? Is what Sinuous does and I can see why now...
   }
   rx.sr = new Set();
   rx.pr = new Set();
@@ -157,9 +167,10 @@ const _rxPause = (rx: Rx) => {
   rx.inner.forEach(_rxPause);
 };
 
-const vocalsCreate = <T>(o: { [k:string]: T }): { [k:string]: Vocal<T> } => {
+const vocalsCreate = <T>(o: T): { [P in keyof T]: Vocal<T[P]>; } => {
   Object.keys(o).forEach(k => {
-    let saved = o[k];
+    // TS? Cannot index T as 'unknown' but <T = {...}> doesn't help either
+    let saved = (o as unknown as { [k: string]: unknown })[k];
     const vocal = ((...args: T[]) => {
       // Read
       if (!args.length) {
@@ -193,9 +204,10 @@ const vocalsCreate = <T>(o: { [k:string]: T }): { [k:string]: Vocal<T> } => {
     }) as Vocal<T>;
     vocal.id = `vocal-${vocalId++}-${k}`;
     vocal.rx = new Set<Rx>();
-    (o as unknown as { [k:string]: Vocal<T> })[k] = vocal;
+    // @ts-ignore
+    o[k] = vocal;
   });
-  return (o as unknown as { [k:string]: Vocal<T> });
+  return (o as unknown as { [P in keyof T]: Vocal<T[P]> });
 };
 
 const transaction = <T>(fn: () => T): T => {
@@ -233,5 +245,5 @@ const adopt = <T>(rxParent: Rx, fn: () => T): T => {
   return value as T;
 };
 
-export { rxCreate as rx, vocalsCreate as vocals, transaction, adopt, rxKnown };
+export { rxCreate as rx, vocalsCreate as vocals, transaction, adopt, rxKnown, rxStates };
 export type { Rx, Vocal, VocalSubscriber };

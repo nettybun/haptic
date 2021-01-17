@@ -67,7 +67,7 @@ export { h, api, svg, when };
 
 declare namespace h {
   export namespace JSX {
-    type MaybeVocal<T> = T | Vocal<T>;
+    type MaybeVocal<T> = T | ((s: VocalSubscriber) => T);
     type AllowVocal<Props> = { [K in keyof Props]: MaybeVocal<Props[K]> };
 
     type Element = HTMLElement | SVGElement | DocumentFragment;

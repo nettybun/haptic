@@ -1,6 +1,13 @@
 declare type X = any;
 declare type Fn = () => unknown;
 
+declare type RxState =
+    | typeof STATE_ON
+    | typeof STATE_RUNNING
+    | typeof STATE_PAUSED
+    | typeof STATE_PAUSED_STALE
+    | typeof STATE_OFF;
+
 declare type Rx = {
     (): undefined;
     id: string;
@@ -10,12 +17,7 @@ declare type Rx = {
     inner: Set<Rx>;
     runs: number;
     depth: number;
-    state:
-        | typeof STATE_ON
-        | typeof STATE_RUNNING
-        | typeof STATE_PAUSED
-        | typeof STATE_PAUSED_STALE
-        | typeof STATE_OFF;
+    state: RxState;
     pause: () => void;
     unsubscribe: () => void;
 };
@@ -38,10 +40,12 @@ declare const STATE_PAUSED:       readonly [];
 declare const STATE_PAUSED_STALE: readonly [];
 declare const STATE_OFF:          readonly [];
 
+declare const rxStates: Map<RxState, string>;
+
 declare function rxCreate(fn: Fn): Rx;
 declare function vocalsCreate<T>(o: T): { [P in keyof T]: Vocal<T[P]>; };
 declare function transaction<T>(fn: () => T): T;
 declare function adopt<T>(rxParent: Rx, fn: () => T): T;
 
-export { rxCreate as rx, vocalsCreate as vocals, transaction, adopt, rxKnown };
+export { rxCreate as rx, vocalsCreate as vocals, transaction, adopt, rxKnown, rxStates };
 export { Rx, Vocal, VocalSubscriber };
