@@ -1,8 +1,8 @@
-import { h } from '../publish';
-import { rxKnown, vocals } from '../publish/v';
+import { h } from '../src';
+import { rxKnown, rxStates, vocals } from '../src/v';
 
 // Avoid TS any type...
-import type { VocalSubscriber } from '../publish/v';
+import type { VocalSubscriber } from '../src/v';
 
 type $ = VocalSubscriber
 // const z = (rx: (s: VocalSubscriber) => unknown) => rx;
@@ -45,7 +45,7 @@ const Page = () =>
           inner: [...rx.inner].map(x => x.id),
           runs : rx.runs,
           depth: rx.depth,
-          state: rx.state,
+          state: rxStates.get(rx.state) || '?',
         };
       });
       console.log(reg);
