@@ -14,6 +14,7 @@
 // were wrong. Lastly, it's confusing how to differentiate between signals,
 // computeds, and subscriptions.
 
+// TODO: Explicit how?
 // In haptic/v, subscriptions are explicit via `s => s(...)`. Nested functions
 // are then also explicit since they can only create subscriptions if they're
 // passed an `s` as a parameter. Reactive code is run in try/catch blocks to
@@ -47,7 +48,7 @@ type Rx = {
   (): undefined;
   // ID "rx-14-methodName" or "rx-10-"
   id: string;
-  fn: (s: VocalSubscriber) => unknown;
+  fn: (s: SubToken) => unknown;
   sr: Set<Vocal<X>>;
   pr: Set<Vocal<X>>;
   inner: Set<Rx>;
@@ -58,8 +59,11 @@ type Rx = {
   unsubscribe: () => void;
 }
 
+type SubToken = { rx: Rx };
+
 type Vocal<T> = {
   (): T;
+  (s: SubToken): T;
   (value: T): void;
   // ID "v-14-methodName" or "v-10-"
   id: string;
@@ -68,20 +72,20 @@ type Vocal<T> = {
   next?: T;
 }
 
-type VocalSubscriber = <T = X>(v: Vocal<T>) => T;
-
 let vocalId = 0;
 let reactionId = 0;
 
 // Current reaction
 let rxActive: Rx | undefined;
-// Skip the read consistency check during s(vocal)
-let sRead: boolean;
 // Vocals written to during a transaction(() => {...})
 let transactionBatch: Set<Vocal<X>> | undefined;
 
 // Registry of reactions
 const rxKnown = new Set<Rx>();
+
+// TODO: Token lookup
+// TODO: This way SubToken can be `[]`?
+const rxTokenMap = new WeakMap<SubToken, Rx>();
 
 // Unique value to compare with `===` since Symbol() doesn't gzip well
 const STATE_ON           = [] as const;
@@ -129,19 +133,7 @@ const _rxRun = (rx: Rx): void => {
     // memory management" in Sinuous/S.js
     _rxUnsubscribe(rx);
     rx.state = STATE_RUNNING;
-    // Define the subscription function, s(vocal), as a parameter to rx.fn()
-    adopt(rx, () => rx.fn(vocal => {
-      if (rx.pr.has(vocal)) {
-        throw new Error(`Mixed pr/sr ${vocal.id}`);
-      }
-      // Symmetrically link. Use vocal.rx to throw if s() wasn't passed a vocal
-      vocal.rx.add(rx);
-      rx.sr.add(vocal);
-      sRead = 1 as unknown as true;
-      const value = vocal();
-      sRead = 0 as unknown as false;
-      return value;
-    }));
+    adopt(rx, () => rx.fn(/* SubToken */{ rx }));
     rx.runs++;
   }
   rx.state = rx.sr.size
@@ -167,14 +159,14 @@ const _rxPause = (rx: Rx) => {
   rx.inner.forEach(_rxPause);
 };
 
-const vocalsCreate = <T>(o: T): { [P in keyof T]: Vocal<T[P]>; } => {
+const vocalsCreate = <T, V = T[keyof T]>(o: T): { [P in keyof T]: Vocal<T[P]>; } => {
   Object.keys(o).forEach(k => {
-    // TS? Cannot index T as 'unknown' but <T = {...}> doesn't help either
-    let saved = (o as unknown as { [k: string]: unknown })[k];
-    const vocal = ((...args: T[]) => {
-      // Read
+    // @ts-ignore
+    let saved = o[k] as V;
+    const vocal = ((...args: (V | SubToken)[]) => {
+      // Case: Pass-Read
       if (!args.length) {
-        if (rxActive && !sRead) {
+        if (rxActive) {
           if (rxActive.sr.has(vocal)) {
             throw new Error(`Mixed sr/pr ${vocal.id}`);
           }
@@ -182,18 +174,29 @@ const vocalsCreate = <T>(o: T): { [P in keyof T]: Vocal<T[P]>; } => {
         }
         return saved;
       }
-      // Write
+      // Case: Sub-Read (Note it's an arbitrary rx not necessarily rxActive)
+      if ((args[0] as Partial<SubToken>).rx) {
+        // TODO: Use rxTokenMap.get(args[0]).{sr,pr}?
+        const { rx } = args[0] as SubToken;
+        if (rx.pr.has(vocal)) {
+          throw new Error(`Mixed pr/sr ${vocal.id}`);
+        }
+        rx.sr.add(vocal);
+        vocal.rx.add(rx);
+        return saved;
+      }
+      // Case: Transaction (is V)
       if (transactionBatch) {
         transactionBatch.add(vocal);
-        // Bundle size: args[0] is smaller than destructing
-        vocal.next = args[0];
-        // Don't save
+        vocal.next = args[0] as V;
+        // Don't write. Defer until the transaction commit
         return;
       }
-      saved = args[0];
-      // Duplicate into an array else it's an infinite loop...
-      // Sinuous uses a Set() with their unsubscribe() removing expired children
-      // as it goes. I need order though. Plus, deleting from arrays is costly
+      // Case: Write (is V)
+      saved = args[0] as V;
+      // Create a copy of vocal.rx since it can be written to by calling _rxRun
+      // which leads to an infinite loop. Calls are ordered by depth, so I need
+      // an array; Sinuous uses a Set() for this
       const toRun = [...vocal.rx].sort((a, b) => a.depth - b.depth);
       // Ordered by parent->child
       toRun.forEach(rx => {
@@ -201,7 +204,7 @@ const vocalsCreate = <T>(o: T): { [P in keyof T]: Vocal<T[P]>; } => {
         else if (rx.state === STATE_ON) _rxRun(rx);
       });
       // Boxes don't return the value on write, unlike Sinuous/S.js
-    }) as Vocal<T>;
+    }) as Vocal<V>;
     vocal.id = `vocal-${vocalId++}-${k}`;
     vocal.rx = new Set<Rx>();
     // @ts-ignore
@@ -246,4 +249,4 @@ const adopt = <T>(rxParent: Rx, fn: () => T): T => {
 };
 
 export { rxCreate as rx, vocalsCreate as vocals, transaction, adopt, rxKnown, rxStates };
-export type { Rx, Vocal, VocalSubscriber };
+export type { Rx, Vocal, SubToken };

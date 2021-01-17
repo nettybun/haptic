@@ -18,7 +18,7 @@
 import { h, api } from './h';
 import { rx, adopt } from './v';
 
-import type { Rx, VocalSubscriber } from './v';
+import type { Rx, SubToken } from './v';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
 type El = Element | Node | DocumentFragment | undefined;
@@ -37,9 +37,9 @@ const svg = <T extends () => Element>(closure: T): ReturnType<T> => {
 
 /** Utility: Switches content when the vocal in `condition` is updated */
 const when = <T extends string>(
-  condition: (s: VocalSubscriber) => T,
+  condition: (s: SubToken) => T,
   views: { [k in T]?: Component }
-): (s: VocalSubscriber) => El => {
+): (s: SubToken) => El => {
   const renderedEl = {} as { [k in T]: El };
   const renderedRx = {} as { [k in T]: Rx };
   let condActive: T;
@@ -67,7 +67,7 @@ export { h, api, svg, when };
 
 declare namespace h {
   export namespace JSX {
-    type MaybeVocal<T> = T | ((s: VocalSubscriber) => T);
+    type MaybeVocal<T> = T | ((s: SubToken) => T);
     type AllowVocal<Props> = { [K in keyof Props]: MaybeVocal<Props[K]> };
 
     type Element = HTMLElement | SVGElement | DocumentFragment;
