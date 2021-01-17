@@ -38,6 +38,7 @@ function h(...args: unknown[]): El {
       // eslint-disable-next-line no-implicit-coercion
       api.property(el as Node, arg, null, !!api.ns);
     }
+    // TODO: If arg.$rx only? Do we support functions? Or cast them to strings.
     else if (typeof arg === 'function') {
       if (el) {
         // See note in add.js#frag() - This is a Text('') node

@@ -41,6 +41,13 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
     // @ts-expect-error Reusing the variable but doesn't match the signature
     current = value;
   }
+  // TODO: Revisit this. Is this a good idea? Might be better to do (value.$rx)
+  // check and force people to define their own reactions themselves. Less magic
+  // and less accidentally created reactions. I'd prefer to print functions as
+  // strings. (TODO: Check that h() can stringify). If a reaction is passed, it
+  // should be able to be tapped via:
+  // const prevFn = rx.fn;
+  // rx.fn = (...args) => { current = ... api.insert(...prevFn(...args)...); })
   else if (typeof value === 'function') {
     // Bug in TypeScript? value is unknown...
     api.rx((...args) => {
@@ -48,7 +55,7 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
     });
   }
   else {
-    // Block for nodes, fragments, Arrays, non-stringables and node -> stringable.
+    // Block for Node, Fragment, Array, Functions, etc. This stringifies via h()
     if (endMark) {
       // `current` can't be `0`, it's coerced to a string in insert.
       if (current) {
@@ -64,12 +71,9 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
     } else {
       el.textContent = '';
     }
-    // TODO: Bundle size...
-    current = undefined;
-
-    if (value && value !== true) {
-      current = api.add(el, value as string | number, endMark);
-    }
+    current = value && value !== true
+      ? api.add(el, value as string | number, endMark)
+      : undefined;
   }
   return current;
 };
