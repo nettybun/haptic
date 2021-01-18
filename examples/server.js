@@ -3,86 +3,51 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
-
-let serve;
-let exit;
-
-const exitHandler = () => {
-  if (exit) return;
-  exit = true;
-  console.log();
-  if (serve) {
-    console.log('Turning off esbuild');
-    serve.stop();
-  }
-  if (server) {
-    console.log('Turning off webserver');
-    server.close();
-  }
-};
-process.on('SIGINT', exitHandler);
-process.on('uncaughtException', exitHandler);
+let __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 esbuild
-  .serve({
-    port: 3000,
-  }, {
+  .serve({ port: 3000 }, {
     entryPoints: ['./index.tsx'],
     format: 'esm',
     bundle: true,
-  })
-  .then(serveProcess => {
-    serve = serveProcess;
-    server.listen(4000, err => {
-      if (err) throw err;
-      console.log('Served on http://localhost:4000');
-    });
   })
   .catch(err => {
     console.error(err);
     process.exit(1);
   });
 
-const server = http.createServer((req, res) => {
-  console.log(`${req.method}: ${req.url}`);
-  if (!req.url) {
-    res.writeHead(400, 'No URL');
-    res.end();
-    return;
-  }
-  if (req.url.endsWith('.js')) {
-    const proxyReq = http.request({ path: req.url, port: 3000 });
-    proxyReq.on('response', proxyRes => {
-      for (const key in proxyRes.headers) {
-        res.setHeader(key, proxyRes.headers[key]);
-      }
-      console.log(`Proxy: ${req.url}: ${proxyRes.statusCode} ${proxyRes.headers['content-type']}`);
-      proxyRes.pipe(res);
+let mime = {
+  '.html': 'text/html',
+  '.css': 'text/css',
+};
+let server = http.createServer((req, res) => {
+  let filename = req.url && req.url !== '/' ? req.url : 'index.html';
+  let filepath = path.join(__dirname, filename);
+  if (fs.existsSync(filepath)) {
+    let stream = fs.createReadStream(filepath);
+    stream.on('ready', () => {
+      let type = mime[path.parse(filepath).ext] || 'application/octet-stream';
+      console.log(`${req.method} ${req.url} => 200 ${type}`);
+      res.writeHead(200, { 'content-type': type });
+      stream.pipe(res);
     });
-    req.pipe(proxyReq);
-    return;
+    stream.on('error', err => {
+      console.log(`${req.method} ${req.url} => 500 ${filepath} ${err.name}`);
+      res.writeHead(500, err.name);
+      res.end(JSON.stringify(err));
+    });
+  } else {
+    let reqProxy = http.request({ path: req.url, port: 3000 });
+    reqProxy.on('response', resProxy => {
+      let type = resProxy.headers['content-type'];
+      console.log(`${req.method} ${req.url} => ${resProxy.statusCode} ${type} via esbuild`);
+      res.writeHead(resProxy.statusCode, { 'content-type': type });
+      resProxy.pipe(res);
+    });
+    req.pipe(reqProxy);
   }
-
-  // Send file
-  const filename = req.url !== '/' ? req.url : 'index.html';
-  const filepath = path.join(__dirname, filename);
-  const { ext } = path.parse(filepath);
-  /* eslint-disable key-spacing */
-  const mimetypes = {
-    '.html': 'text/html',
-    '.css' : 'text/css',
-  };
-  res.writeHead(200, {
-    'Content-Type': mimetypes[ext] || 'application/octet-stream',
-  });
-  const stream = fs.createReadStream(filepath);
-  stream.on('error', err => {
-    const errStr = String(err);
-    console.log(`Stream error: ${filepath}, ${errStr}`);
-    res.writeHead(404, 'Stream error');
-    res.write(errStr);
-    res.end();
-  });
-  stream.pipe(res);
+});
+server.listen(4000, err => {
+  if (err) throw err;
+  console.log('Served on http://localhost:4000');
 });
