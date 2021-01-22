@@ -9,7 +9,7 @@ const data = vocals({
 
 const Page = () =>
   <main>
-    {/* TODO: No? Reactions don't return anything... */}
+    {/* I think this is ok. Haptic will monkey-patch the fn to extract its return value */}
     <p>This has been clicked {rx(data.count)} times</p>
     <input
       placeholder='Type something...'

@@ -35,7 +35,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any,prefer-destructuring,no-multi-spaces */
 
 type X = any;
-type Fn = () => unknown;
 
 type RxState =
   | typeof STATE_ON
@@ -48,7 +47,9 @@ type Rx = {
   (): undefined;
   // ID "rx-14-methodName" or "rx-10-"
   id: string;
-  fn: (s: SubToken) => unknown;
+  // This *can* return something which is useful for monkey-patching the
+  // reaction after its been created
+  fn: ($: SubToken) => unknown;
   sr: Set<Vocal<X>>;
   pr: Set<Vocal<X>>;
   inner: Set<Rx>;
@@ -101,7 +102,7 @@ const rxStates = new Map<RxState, string>([
   [STATE_OFF,          'STATE_OFF'         ],
 ]);
 
-const rxCreate = (fn: Fn): Rx => {
+const rxCreate = (fn: ($: SubToken) => unknown): Rx => {
   // Properties sr,pr,inner,state are setup by _rxUnsubscribe() below
   // @ts-ignore
   const rx: Rx = () => _rxRun(rx);
