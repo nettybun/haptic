@@ -1,11 +1,5 @@
 import { h } from '../src';
-import { rxKnown, rxStates, vocals } from '../src/v';
-
-// Avoid TS any type...
-import type { VocalSubscriber } from '../src/v';
-
-type $ = VocalSubscriber
-// const z = (rx: (s: VocalSubscriber) => unknown) => rx;
+import { rxKnown, rxStates, vocals, rx } from '../src/v';
 
 const data = vocals({
   text: '',
@@ -15,10 +9,11 @@ const data = vocals({
 
 const Page = () =>
   <main>
-    <p>This has been clicked {(s:$) => s(data.count)} times</p>
+    {/* TODO: No? Reactions don't return anything... */}
+    <p>This has been clicked {rx(data.count)} times</p>
     <input
       placeholder='Type something...'
-      value={s => s(data.text)}
+      value={rx(data.text)}
       // @ts-ignore TODO:
       onKeyUp={ev => {
         // @ts-ignore TODO:
@@ -29,9 +24,12 @@ const Page = () =>
     <button onClick={() => data.count(data.count() + 1)}>Inc</button>
     <p>Here's math:
       {
-        (s:$) => s(data.count) < 5
-          ? Math.PI * s(data.count)
-          : `Text: "${s(data.text)}" is ${s(data.text).length} chars`
+        // Ugh reactions can't return anything...
+        rx($ => {
+          return data.count($) < 5
+            ? Math.PI * data.count($)
+            : `Text: "${data.text($)}" is ${data.text($).length} chars`;
+        })
       }
     </p>
     <button onClick={() => {
@@ -53,8 +51,7 @@ const Page = () =>
     }}>
       Load rx registry
     </button>
-    {/* TODO: This syntax is more awkward than I thought it would be */}
-    <pre>{(s:$) => s(data.registryContent)}</pre>
+    <pre>{rx(data.registryContent)}</pre>
   </main>;
 
 document.body.innerHTML = '';

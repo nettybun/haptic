@@ -59,11 +59,12 @@ type Rx = {
   unsubscribe: () => void;
 }
 
-type SubToken = { rx: Rx };
+// Symbol doesn't gzip well. Only used as a WeakMap key
+type SubToken = [];
 
 type Vocal<T> = {
   (): T;
-  (s: SubToken): T;
+  ($: SubToken): T;
   (value: T): void;
   // ID "v-14-methodName" or "v-10-"
   id: string;
@@ -82,9 +83,6 @@ let transactionBatch: Set<Vocal<X>> | undefined;
 
 // Registry of reactions
 const rxKnown = new Set<Rx>();
-
-// TODO: Token lookup
-// TODO: This way SubToken can be `[]`?
 const rxTokenMap = new WeakMap<SubToken, Rx>();
 
 // Unique value to compare with `===` since Symbol() doesn't gzip well
@@ -104,7 +102,7 @@ const rxStates = new Map<RxState, string>([
 ]);
 
 const rxCreate = (fn: Fn): Rx => {
-  // Ignore needed since sr,pr,inner are setup by _rxUnsubscribe()
+  // Properties sr,pr,inner,state are setup by _rxUnsubscribe() below
   // @ts-ignore
   const rx: Rx = () => _rxRun(rx);
   rx.id = `rx-${reactionId++}-${fn.name}`;
@@ -115,11 +113,10 @@ const rxCreate = (fn: Fn): Rx => {
   rx.unsubscribe = () => _rxUnsubscribe(rx);
   rxKnown.add(rx);
   if (rxActive) rxActive.inner.add(rx);
-  rx();
+  _rxUnsubscribe(rx);
   return rx;
 };
 
-// This takes a meta object because honestly you shouldn't use it directly?
 const _rxRun = (rx: Rx): void => {
   if (rx.state === STATE_RUNNING) {
     throw new Error(`Loop ${rx.id}`);
@@ -133,7 +130,10 @@ const _rxRun = (rx: Rx): void => {
     // memory management" in Sinuous/S.js
     _rxUnsubscribe(rx);
     rx.state = STATE_RUNNING;
-    adopt(rx, () => rx.fn(/* SubToken */{ rx }));
+    const $: SubToken = [];
+    // Token is set but never deleted since it's a WeakMap
+    rxTokenMap.set($, rx);
+    adopt(rx, () => rx.fn($));
     rx.runs++;
   }
   rx.state = rx.sr.size
@@ -174,15 +174,15 @@ const vocalsCreate = <T, V = T[keyof T]>(o: T): { [P in keyof T]: Vocal<T[P]>; }
         }
         return saved;
       }
-      // Case: Sub-Read (Note it's an arbitrary rx not necessarily rxActive)
-      if ((args[0] as Partial<SubToken>).rx) {
-        // TODO: Use rxTokenMap.get(args[0]).{sr,pr}?
-        const { rx } = args[0] as SubToken;
-        if (rx.pr.has(vocal)) {
+      // Case: Sub-Read; arbitrary reaction not necessarily rxActive
+      let $rx: Rx | undefined;
+      // eslint-disable-next-line no-cond-assign
+      if ($rx = rxTokenMap.get(args[0] as SubToken)) {
+        if ($rx.pr.has(vocal)) {
           throw new Error(`Mixed pr/sr ${vocal.id}`);
         }
-        rx.sr.add(vocal);
-        vocal.rx.add(rx);
+        $rx.sr.add(vocal);
+        vocal.rx.add($rx);
         return saved;
       }
       // Case: Transaction (is V)
