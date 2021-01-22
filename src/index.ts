@@ -24,7 +24,20 @@ import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements 
 type El = Element | Node | DocumentFragment | undefined;
 type Component = (...args: unknown[]) => El;
 
-api.rx = rx;
+api.exprTest = (expr) => {
+  // We know it's a function by now
+  return '$rx' in expr;
+};
+
+api.exprHandler = (expr, updateCallback) => {
+  const rx = expr as Rx;
+  const prevFn = rx.fn;
+  rx.fn = $ => {
+    // Extract the return value from the rx.fn and update the DOM with it
+    const value = prevFn($);
+    updateCallback(value);
+  };
+};
 
 /** Utility: Renders SVGs by setting h() to the SVG namespace */
 const svg = <T extends () => Element>(closure: T): ReturnType<T> => {

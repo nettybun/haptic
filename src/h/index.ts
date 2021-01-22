@@ -5,6 +5,8 @@ import { insert } from './nodeInsert.js';
 import { property } from './nodeProperty.js';
 import { remove } from './nodeRemove.js';
 
+type Fn = (...args: unknown[]) => unknown;
+
 // This API should be compatible with community libraries that extend Sinuous
 const api = {
   /** Element namespace URL such as SVG or MathML */
@@ -17,8 +19,9 @@ const api = {
   property,
   // Renamed for compatibility with Sinuous' community libraries
   rm: remove,
-  /** Reactivity callback; could be haptic/v, sinuous/observable, mobx, etc */
-  rx: (_: (...args: unknown[]) => unknown) => {},
+  // Reactivity could be haptic/v, sinuous/observable, mobx, etc
+  exprTest: (expr: Fn) => Boolean(expr),
+  exprHandler: (expr: Fn, updateCallback: (value: unknown) => void) => updateCallback(expr),
 };
 
 // Reference the latest internal h() allowing others to customize the call

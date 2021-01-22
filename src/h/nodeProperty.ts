@@ -1,5 +1,6 @@
 import { api } from './index.js';
 
+type Fn = (...args: unknown[]) => unknown;
 type EventHandler = (ev: Event) => unknown;
 // Similar to $o for observable, this is an indicator that events are attached
 type NodeEvented = Node & { $l?: { [name: string]: EventHandler } };
@@ -39,10 +40,9 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
     // have an observable indicator
     handleEvent(el, name, value as EventHandler);
   }
-  else if (typeof value === 'function') {
-    // No bug in TypeScript? (see nodeInsert.ts)
-    api.rx((...args) => {
-      api.property(el, value(...args), name, isAttr, isCss);
+  else if (typeof value === 'function' && api.exprTest(value as Fn)) {
+    api.exprHandler(value as Fn, (v: unknown) => {
+      api.property(el, v, name, isAttr, isCss);
     });
   }
   else if (isCss) {

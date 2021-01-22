@@ -41,17 +41,9 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
     // @ts-expect-error Reusing the variable but doesn't match the signature
     current = value;
   }
-  // TODO: Revisit this. Is this a good idea? Might be better to do (value.$rx)
-  // check and force people to define their own reactions themselves. Less magic
-  // and less accidentally created reactions. I'd prefer to print functions as
-  // strings. (TODO: Check that h() can stringify). If a reaction is passed, it
-  // should be able to be tapped via:
-  // const prevFn = rx.fn;
-  // rx.fn = (...args) => { current = ... api.insert(...prevFn(...args)...); })
-  else if (typeof value === 'function') {
-    // Bug in TypeScript? value is unknown...
-    api.rx((...args) => {
-      current = api.insert(el, (value as Fn)(...args), endMark, current, startNode);
+  else if (typeof value === 'function' && api.exprTest(value as Fn)) {
+    api.exprHandler(value as Fn, (v: unknown) => {
+      current = api.insert(el, v, endMark, current, startNode);
     });
   }
   else {
