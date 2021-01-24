@@ -2,61 +2,53 @@ import { api } from './index.js';
 
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from '../jsx';
 
-type El = Element | Node | DocumentFragment | undefined;
-type Component = (...args: unknown[]) => El;
+type El = Element | Node | DocumentFragment;
+type Tag = El | Component | [] | string;
+type Component = (...args: unknown[]) => El | undefined;
 
-function h(tag?: string | [] | Component, props?: unknown, ...children: unknown[]): El
-function h(...args: unknown[]): El {
+function h(tag: Tag, props?: unknown, ...children: unknown[]): El | undefined
+function h(tag: Tag, ...args: unknown[]): El | undefined {
+  if (typeof tag === 'function') {
+    return tag(...args);
+  }
   let el: El;
-  const item = (arg: unknown) => {
-    // @ts-expect-error Empty if body
+  if (typeof tag === 'string') {
+    el = api.ns
+      ? document.createElementNS(api.ns, tag)
+      : document.createElement(tag);
+  }
+  else if (Array.isArray(tag)) {
+    el = document.createDocumentFragment();
+  }
+  // Hopefully Element, Node, DocumentFragment, but could be anything...
+  else {
+    el = tag;
+  }
+  args.forEach(arg => {
+    // @ts-expect-error Empty if
     // eslint-disable-next-line eqeqeq
     if (arg == null);
-    else if (typeof arg === 'string') {
-      if (el) {
-        api.add(el, arg);
-      } else {
-        el = api.ns
-          ? document.createElementNS(api.ns, arg)
-          : document.createElement(arg);
-      }
-    }
-    else if (Array.isArray(arg)) {
-      // Support Fragments
-      if (!el) el = document.createDocumentFragment();
-      arg.forEach(item);
-    }
-    else if (arg instanceof Node) {
-      if (el) {
-        api.add(el, arg);
-      } else {
-        // Support updates
-        el = arg;
-      }
+    else if (typeof arg === 'string' || arg instanceof Node) {
+      // Direct add fast path
+      api.add(el, arg);
     }
     else if (typeof arg === 'object') {
       // eslint-disable-next-line no-implicit-coercion
-      api.property(el as Node, arg, null, !!api.ns);
+      api.property(el, arg, null, !!api.ns);
     }
-    // TODO: If arg.$rx only? Do we support functions? Or cast them to strings.
-    else if (typeof arg === 'function') {
-      if (el) {
-        // See note in add.js#frag() - This is a Text('') node
-        const endMark = api.add(el, '') as Text;
-        api.insert(el, arg, endMark);
-      } else {
-        // Support components (unsafe)
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        el = arg(...args.splice(1));
-      }
+    else if (Array.isArray(arg)) {
+      args.push(...arg);
+    }
+    else if (api.exprTest(arg)) {
+      // Last parameter, endMark, is a Text('') node; see nodeAdd.js#Frag
+      api.insert(el, arg, api.add(el, '') as Text);
     }
     else {
       // Default case, cast as string and add
       // eslint-disable-next-line no-implicit-coercion,@typescript-eslint/restrict-plus-operands
-      api.add(el as Node, '' + arg);
+      api.add(el, '' + arg);
     }
-  };
-  args.forEach(item);
+  });
   return el;
 }
 

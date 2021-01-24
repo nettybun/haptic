@@ -21,12 +21,11 @@ import { rx, adopt } from './v';
 import type { Rx, SubToken } from './v';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
-type El = Element | Node | DocumentFragment | undefined;
+type El = Element | Node | DocumentFragment;
 type Component = (...args: unknown[]) => El;
 
 api.exprTest = (expr) => {
-  // We know it's a function by now
-  return '$rx' in expr;
+  return typeof expr === 'function';
 };
 
 api.exprHandler = (expr, updateCallback) => {
@@ -50,26 +49,26 @@ const svg = <T extends () => Element>(closure: T): ReturnType<T> => {
 
 /** Utility: Switches content when the vocal in `condition` is updated */
 const when = <T extends string>(
-  condition: (s: SubToken) => T,
+  condition: ($: SubToken) => T,
   views: { [k in T]?: Component }
-): (s: SubToken) => El => {
-  const renderedEl = {} as { [k in T]: El };
-  const renderedRx = {} as { [k in T]: Rx };
+): ($: SubToken) => El | undefined => {
+  const renderedEl = {} as { [k in T]?: El };
+  const renderedRx = {} as { [k in T]?: Rx };
   let condActive: T;
-  return s => {
-    const cond = condition(s);
+  return $ => {
+    const cond = condition($);
     if (cond !== condActive && views[cond]) {
       // Tick. Pause reactions. Keep DOM intact.
-      renderedRx[condActive].pause();
+      (renderedRx[condActive] as Rx).pause();
       condActive = cond;
       // Rendered?
       if (renderedEl[cond]) {
         // Then unpause. If nothing has changed then no sr/pr links change
-        renderedRx[cond]();
+        (renderedRx[cond] as Rx)();
       }
       // Able to render?
       const parent = rx(() => {});
-      renderedEl[cond] = adopt(parent, () => h(views[cond]));
+      renderedEl[cond] = adopt(parent, () => h(views[cond] as Component));
       renderedRx[cond] = parent;
     }
     return renderedEl[cond];
