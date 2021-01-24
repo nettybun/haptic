@@ -7,6 +7,11 @@ const data = vocals({
   registryContent: '',
 });
 
+const localRx = rx($ => {
+  const content = data.registryContent($);
+  return `The registry content is ${content.length} long now at ${new Date().toLocaleTimeString()}`;
+});
+
 const Page = () =>
   <main>
     {/* I think this is ok. Haptic will monkey-patch the fn to extract its return value */}
@@ -23,15 +28,11 @@ const Page = () =>
       style='display:block'/>
     <button onClick={() => data.count(data.count() + 1)}>Inc</button>
     <p>Here's math:
-      {
-        // Ugh reactions can't return anything...
-        rx($ => {
-          return data.count($) < 5
-            ? Math.PI * data.count($)
-            : `Text: "${data.text($)}" is ${data.text($).length} chars`;
-        })
-      }
+      {rx($ => data.count($) < 5
+        ? Math.PI * data.count($)
+        : `Text: "${data.text($)}" is ${data.text($).length} chars`)}
     </p>
+    <p>Functions that aren't reactions??? {() => <span>WHOA DAMN SERIALIZED!</span>}</p>
     <button onClick={() => {
       const reg: Record<string, unknown> = {};
       rxKnown.forEach(rx => {
@@ -51,6 +52,7 @@ const Page = () =>
     }}>
       Load rx registry
     </button>
+    <p>{localRx}</p>
     <pre>{rx(data.registryContent)}</pre>
   </main>;
 

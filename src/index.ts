@@ -25,17 +25,28 @@ type El = Element | Node | DocumentFragment;
 type Component = (...args: unknown[]) => El;
 
 api.exprTest = (expr) => {
-  return typeof expr === 'function';
+  // To be very explicit I'd do rxKnown.has(expr) but that's likely expensive
+  return typeof expr === 'function' && 'id' in (expr as Rx);
 };
 
+// This can more easily be passed the element, attribute, endMark, etc.
 api.exprHandler = (expr, updateCallback) => {
   const rx = expr as Rx;
   const prevFn = rx.fn;
+  rx.id = `html-dom-${rx.id}`;
   rx.fn = $ => {
     // Extract the return value from the rx.fn and update the DOM with it
     const value = prevFn($);
     updateCallback(value);
+
+    // const span = document.createElement('span');
+    // span.style.border = '2px dashed red';
+    // span.textContent = String(value);
+    // updateCallback(span);
   };
+  // Reactions are lazy so call that value now! (and to init subscriptions!)
+  console.log('Call rx', rx.id);
+  rx();
 };
 
 /** Utility: Renders SVGs by setting h() to the SVG namespace */
