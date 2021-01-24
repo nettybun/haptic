@@ -5,6 +5,8 @@ import { insert } from './nodeInsert.js';
 import { property } from './nodeProperty.js';
 import { remove } from './nodeRemove.js';
 
+const noop = () => {};
+
 // This API should be compatible with community libraries that extend Sinuous
 const api = {
   /** Element namespace URL such as SVG or MathML */
@@ -18,8 +20,8 @@ const api = {
   // Renamed for compatibility with Sinuous' community libraries
   rm: remove,
   // Reactivity could be haptic/v, sinuous/observable, mobx, etc
-  exprTest: (expr: unknown) => Boolean(expr),
-  exprHandler: (expr: unknown, updateCallback: (value: unknown) => void) => updateCallback(expr),
+  rxTest: noop as unknown as (expr: unknown) => boolean,
+  rxHandler: noop as unknown as (expr: unknown, updateCallback: (value: unknown) => void) => void,
 };
 
 // Reference the latest internal h() allowing others to customize the call

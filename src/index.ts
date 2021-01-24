@@ -24,16 +24,16 @@ import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements 
 type El = Element | Node | DocumentFragment;
 type Component = (...args: unknown[]) => El;
 
-api.exprTest = (expr) => {
+api.rxTest = (expr) => {
   // To be very explicit I'd do rxKnown.has(expr) but that's likely expensive
   return typeof expr === 'function' && 'id' in (expr as Rx);
 };
 
 // This can more easily be passed the element, attribute, endMark, etc.
-api.exprHandler = (expr, updateCallback) => {
+api.rxHandler = (expr, updateCallback) => {
   const rx = expr as Rx;
   const prevFn = rx.fn;
-  rx.id = `html-dom-${rx.id}`;
+  rx.id = `dom-${rx.id}`;
   rx.fn = $ => {
     // Extract the return value from the rx.fn and update the DOM with it
     const value = prevFn($);
@@ -44,8 +44,8 @@ api.exprHandler = (expr, updateCallback) => {
     // span.textContent = String(value);
     // updateCallback(span);
   };
+  // console.log('Call rx', rx.id);
   // Reactions are lazy so call that value now! (and to init subscriptions!)
-  console.log('Call rx', rx.id);
   rx();
 };
 

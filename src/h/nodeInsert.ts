@@ -1,7 +1,6 @@
 import { api } from './index.js';
 
 type Frag = { _startMark: Text };
-type Fn = (...args: unknown[]) => unknown;
 
 /** Insert a node into an existing node */
 const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag, startNode?: ChildNode | null) => {
@@ -41,8 +40,8 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
     // @ts-expect-error Reusing the variable but doesn't match the signature
     current = value;
   }
-  else if (typeof value === 'function' && api.exprTest(value as Fn)) {
-    api.exprHandler(value as Fn, (v: unknown) => {
+  else if (typeof value === 'function' && api.rxTest(value)) {
+    api.rxHandler(value, (v: unknown) => {
       current = api.insert(el, v, endMark, current, startNode);
     });
   }

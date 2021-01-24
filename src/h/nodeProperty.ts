@@ -1,6 +1,5 @@
 import { api } from './index.js';
 
-type Fn = (...args: unknown[]) => unknown;
 type EventHandler = (ev: Event) => unknown;
 // Similar to $o for observable, this is an indicator that events are attached
 type NodeEvented = Node & { $l?: { [name: string]: EventHandler } };
@@ -40,8 +39,8 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
     // have an observable indicator
     handleEvent(el, name, value as EventHandler);
   }
-  else if (typeof value === 'function' && api.exprTest(value as Fn)) {
-    api.exprHandler(value as Fn, (v: unknown) => {
+  else if (typeof value === 'function' && api.rxTest(value)) {
+    api.rxHandler(value, (v: unknown) => {
       api.property(el, v, name, isAttr, isCss);
     });
   }
