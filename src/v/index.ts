@@ -103,10 +103,9 @@ const rxStates = new Map<RxState, string>([
 ]);
 
 const rxCreate = (fn: ($: SubToken) => unknown): Rx => {
-  // Properties sr,pr,inner,state are setup by _rxUnsubscribe() below
-  // @ts-ignore
+  // @ts-ignore sr,pr,inner,state are setup by _rxUnsubscribe() below
   const rx: Rx = () => _rxRun(rx);
-  rx.id = `rx-${reactionId++}-${fn.name}`;
+  rx.id = `rx-${reactionId++}-${(fn as Vocal<X>).id || fn.name}`;
   rx.fn = fn;
   rx.runs = 0;
   rx.depth = rxActive ? rxActive.depth + 1 : 0;
@@ -164,6 +163,8 @@ const vocalsCreate = <T, V = T[keyof T]>(o: T): { [P in keyof T]: Vocal<T[P]>; }
   Object.keys(o).forEach(k => {
     // @ts-ignore
     let saved = o[k] as V;
+    // TODO: Unfortunately all vocal functions are named "vocal" now...
+    // This defeats the purpose of the o:T all together. Read git history?
     const vocal = ((...args: (V | SubToken)[]) => {
       // Case: Pass-Read
       if (!args.length) {
