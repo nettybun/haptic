@@ -19,6 +19,9 @@ function h(tag: Tag, ...args: unknown[]): El | undefined {
   }
   else if (Array.isArray(tag)) {
     el = document.createDocumentFragment();
+    // Using unshift(tag) is -2 bytes but changes the order of args.forEach
+    // Not sure what the expected behaviour is for h([a,b],c,d)
+    args.unshift(...tag);
   }
   // Hopefully Element, Node, DocumentFragment, but could be anything...
   else {
