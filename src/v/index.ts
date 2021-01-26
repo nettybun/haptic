@@ -1,9 +1,9 @@
 // Vocal
 
-// Reactivity engine for Haptic. This replaces haptic/s' "signal" implementation
-// of the "observer pattern" and is now designed to remove some pitfalls of
-// writing reactive code. There's a lot more code but after a lot of code golf
-// it's only slightly larger min+gzipped at v: 680 bytes; s: 548 bytes.
+// Reactivity engine for Haptic. Replaces the previous haptic/s implementation
+// of an "observer pattern" and addresses many of the pitfalls of writing
+// reactive code. There's a lot more code here but after a lot of golfing it's
+// only slightly larger min+gzipped at 685 bytes over the previous 548 bytes.
 
 // In haptic/s, like Sinuous/S.js, subscriptions are created implicitly when a
 // signal is read. You needed to know ahead of time if a function was safe to
@@ -11,29 +11,31 @@
 // accidental subscriptions. This meant it was too easy setup signals in an
 // infinite loop; which is hard to debug since the browser locks up. If an error
 // was thrown in a computed then system state was broken and future work calls
-// were wrong. Lastly, it's confusing how to differentiate between signals,
-// computeds, and subscriptions.
+// were wrong. Everything is an anonymous function; bad debugging. Lastly, it's
+// confusing how to differentiate between signals, computeds, and subscriptions.
 
-// TODO: Explicit how?
-// In haptic/v, subscriptions are explicit via `s => s(...)`. Nested functions
-// are then also explicit since they can only create subscriptions if they're
-// passed an `s` as a parameter. Reactive code is run in try/catch blocks to
-// keep the system recoverable. There's only values and reactions; they're
-// also unambiguous since reactions can't store data but values can. You can't
-// loop a reaction - it'll throw.
+// Subscriptions are explicit in haptic/v. Reading a value as `v.userCount()` is
+// passive (pass-read; pr) while subscribing (sub-read; sr) uses a unique "$"
+// token as `v.userCount($)`. This token is created when defining a reaction. It
+// follows that nested functions are explicit too since $ needs to be given as a
+// parameter. To help consistency, sr/pr reads can't be mixed for a value in a
+// reaction. Fixing other issues: code is run in try/catch blocks to keep the
+// system recoverable; there's only values and reactions, which are unambiguous
+// since reactions can't store data but values can.
 
 // There's the usual support for transactions and for re-parenting nested
-// reactions (as `adopt` instead of `root`).
+// reactions (called `adopt` instead of `root`).
 
 // New features: Reactions can pause without undoing subscriptions; which is
 // useful to efficiently skip DOM updates for any elements that are off-screen.
-// There's a push to help inspecting/debugging: (1) There's an ID on values and
-// reactions, which is used error messages. (2) Reactions are stored in a global
-// registry. (3) Reactions track how many times they've ran. (4) Reactions are
-// implemented as state machines.
+// There's a push to help inspecting/debugging: All values and reactions have a
+// good Function.name (which includes a counter) to ID them. This is used in
+// error messages. Reactions are implemented as state machines so they can't
+// loop; they're stored in a global Set<Rx> registry; and they track how many
+// times they've ran.
 
-/* eslint-disable @typescript-eslint/no-explicit-any,prefer-destructuring,no-multi-spaces */
-
+/* eslint-disable no-multi-spaces */
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 type X = any;
 type Obj = { [k: string]: unknown };
 type ObjVocal<T extends Obj> = { [P in keyof T]: Vocal<T[P]>; }
