@@ -3,16 +3,17 @@
 // Reactivity engine for Haptic. Replaces the previous haptic/s implementation
 // of an "observer pattern" and addresses many of the pitfalls of writing
 // reactive code. There's a lot more code here but after a lot of golfing it's
-// only slightly larger min+gzipped at 685 bytes over the previous 548 bytes.
+// only slightly larger min+gzipped at 682 bytes over the previous 548 bytes.
 
 // In haptic/s, like Sinuous/S.js, subscriptions are created implicitly when a
 // signal is read. You needed to know ahead of time if a function was safe to
-// call during a computed() or if a sample() wrapper will be needed to avoid
-// accidental subscriptions. This meant it was too easy setup signals in an
-// infinite loop; which is hard to debug since the browser locks up. If an error
-// was thrown in a computed then system state was broken and future work calls
-// were wrong. Everything is an anonymous function; bad debugging. Lastly, it's
-// confusing how to differentiate between signals, computeds, and subscriptions.
+// call inside a computed() or if it needed sample() to avoid an accidental
+// subscription. This meant it was too easy setup signals in an infinite loop,
+// which is hard to debug since the browser locks up. If an error was thrown in
+// a computed then system state was invalid and future computeds could be wrong.
+// Everything is emitted as an anonymous function, which makes it harder to
+// debugging who's calling who. Lastly, it's conceptually confusing for people
+// to differentiate between signals, computeds, and subscriptions.
 
 // Subscriptions are explicit in haptic/v. Reading a value as `v.userCount()` is
 // passive (pass-read; pr) while subscribing (sub-read; sr) uses a unique "$"

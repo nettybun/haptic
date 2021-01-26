@@ -38,6 +38,12 @@ declare const api: {
     property: (el: Node, value: unknown, name: string | null, isAttr?: boolean, isCss?: boolean) => void;
     rm: (parent: Node, startNode: ChildNode | null, endMark: Node) => void;
     rx: (_: (...args: unknown[]) => unknown) => unknown;
+    // TODO: Outdated
+    sample: <T>(fn: () => T) => T;
+    subscribe: <T>(fn: () => T) => void;
 };
+
+// TODO: Where do svg/when utilities live?
+// TODO: Should when() do the api.x thing? Depends where these live?
 
 export { h, api };
