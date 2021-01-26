@@ -47,8 +47,6 @@ type RxState =
 
 type Rx = {
   (): undefined;
-  // ID "rx-14-methodName" or "rx-10-"
-  id: string;
   // This *can* return something which is useful for monkey-patching the
   // reaction after its been created
   fn: ($: SubToken) => unknown;
@@ -69,8 +67,6 @@ type Vocal<T> = {
   (): T;
   ($: SubToken): T;
   (value: T): void;
-  // ID "v-14-methodName" or "v-10-"
-  id: string;
   rx: Set<Rx>;
   // This property doesn't exist some of the time
   next?: T;
@@ -105,9 +101,9 @@ const rxStates = new Map<RxState, string>([
 ]);
 
 const rxCreate = (fn: ($: SubToken) => unknown): Rx => {
+  const id = `rx#${reactionId++}(${fn.name})`;
   // @ts-ignore sr,pr,inner,state are setup by _rxUnsubscribe() below
-  const rx: Rx = () => _rxRun(rx);
-  rx.id = `rx-${reactionId++}-${fn.name}`;
+  const rx: Rx = { [id]() { _rxRun(rx); } }[id];
   rx.fn = fn;
   rx.runs = 0;
   rx.depth = rxActive ? rxActive.depth + 1 : 0;
@@ -121,7 +117,7 @@ const rxCreate = (fn: ($: SubToken) => unknown): Rx => {
 
 const _rxRun = (rx: Rx): void => {
   if (rx.state === STATE_RUNNING) {
-    throw new Error(`Loop ${rx.id}`);
+    throw new Error(`Loop ${rx.name}`);
   }
   // If STATE_PAUSED then STATE_PAUSED_STALE was never reached; nothing has
   // changed. Restore state (below) and call inner reactions so they can check
@@ -167,12 +163,13 @@ const vocalsCreate = <T extends Obj>(o: T): ObjVocal<T> => {
     let saved = o[k];
     // This preserves the function name, which is important for debugging
     // Excuse the awkward wrapper and indentation hack
-    const vocal = { [k](...args: (V | SubToken)[]) {
+    const id = `vocal#${vocalId++}(${k})`;
+    const vocal = { [id](...args: (V | SubToken)[]) {
       // Case: Pass-Read
       if (!args.length) {
         if (rxActive) {
           if (rxActive.sr.has(vocal)) {
-            throw new Error(`Mixed sr/pr ${vocal.id}`);
+            throw new Error(`Mixed sr/pr ${vocal.name}`);
           }
           rxActive.pr.add(vocal);
         }
@@ -183,7 +180,7 @@ const vocalsCreate = <T extends Obj>(o: T): ObjVocal<T> => {
       // eslint-disable-next-line no-cond-assign
       if ($rx = rxTokenMap.get(args[0] as SubToken)) {
         if ($rx.pr.has(vocal)) {
-          throw new Error(`Mixed pr/sr ${vocal.id}`);
+          throw new Error(`Mixed pr/sr ${vocal.name}`);
         }
         $rx.sr.add(vocal);
         vocal.rx.add($rx);
@@ -208,8 +205,7 @@ const vocalsCreate = <T extends Obj>(o: T): ObjVocal<T> => {
         else if (rx.state === STATE_ON) _rxRun(rx);
       });
       // Vocals don't return the value on write, unlike Sinuous/S.js
-    } }[k] as Vocal<V>;
-    vocal.id = `vocal-${vocalId++}-${k}`;
+    } }[id] as Vocal<V>;
     vocal.rx = new Set<Rx>();
     // @ts-ignore
     o[k] = vocal;

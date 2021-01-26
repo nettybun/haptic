@@ -26,14 +26,15 @@ type Component = (...args: unknown[]) => El;
 
 api.rxTest = (expr) => {
   // To be very explicit I'd do rxKnown.has(expr) but that's likely expensive
-  return typeof expr === 'function' && 'id' in (expr as Rx);
+  return typeof expr === 'function' && expr.name.startsWith('rx');
 };
 
 // This can more easily be passed the element, attribute, endMark, etc.
 api.rxHandler = (expr, updateCallback) => {
   const rx = expr as Rx;
   const prevFn = rx.fn;
-  rx.id = `dom-${rx.id}`;
+  // TODO: Doesn't exist...
+  // rx.id = `dom-${rx.id}`;
   rx.fn = $ => {
     // Extract the return value from the rx.fn and update the DOM with it
     const value = prevFn($);

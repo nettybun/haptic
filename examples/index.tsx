@@ -36,12 +36,12 @@ const Page = () =>
     <button onClick={() => {
       const reg: Record<string, unknown> = {};
       rxKnown.forEach(rx => {
-        reg[rx.id] = {
+        reg[rx.name] = {
           /* eslint-disable key-spacing */
           fn   : rx.fn.name,
-          sr   : [...rx.sr].map(x => x.id),
-          pr   : [...rx.pr].map(x => x.id),
-          inner: [...rx.inner].map(x => x.id),
+          sr   : [...rx.sr].map(x => x.name),
+          pr   : [...rx.pr].map(x => x.name),
+          inner: [...rx.inner].map(x => x.name),
           runs : rx.runs,
           depth: rx.depth,
           state: rxStates.get(rx.state) || '?',
