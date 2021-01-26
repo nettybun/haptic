@@ -35,6 +35,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any,prefer-destructuring,no-multi-spaces */
 
 type X = any;
+type Obj = { [k: string]: unknown };
+type ObjVocal<T extends Obj> = { [P in keyof T]: Vocal<T[P]>; }
 
 type RxState =
   | typeof STATE_ON
@@ -159,61 +161,64 @@ const _rxPause = (rx: Rx) => {
   rx.inner.forEach(_rxPause);
 };
 
-const vocalsCreate = <T, V = T[keyof T]>(o: T): { [P in keyof T]: Vocal<T[P]>; } => {
-  Object.keys(o).forEach(k => {
-    // @ts-ignore
-    let saved = o[k] as V;
-    // TODO: Unfortunately all vocal functions are named "vocal" now...
-    // This defeats the purpose of the o:T all together. Read git history?
-    const vocal = ((...args: (V | SubToken)[]) => {
-      // Case: Pass-Read
-      if (!args.length) {
-        if (rxActive) {
-          if (rxActive.sr.has(vocal)) {
-            throw new Error(`Mixed sr/pr ${vocal.id}`);
+const vocalsCreate = <T extends Obj, V = T[keyof T], R = ObjVocal<T>>(o: T): R =>
+  Object.keys(o).reduce((res, k) => {
+    let saved = o[k];
+    // This preserves the function name, which is important for debugging
+    // TODO: res[k] = { [`vocal-${vocalId++}-${k}`](...args) {}, ...? }
+    res = {
+      [k](...args: (V | SubToken)[]) {
+        // @ts-ignore
+        const vocal = res[k] as Vocal<V>;
+        // Case: Pass-Read
+        if (!args.length) {
+          if (rxActive) {
+            if (rxActive.sr.has(vocal)) {
+              throw new Error(`Mixed sr/pr ${vocal.id}`);
+            }
+            rxActive.pr.add(vocal);
           }
-          rxActive.pr.add(vocal);
+          return saved;
         }
-        return saved;
-      }
-      // Case: Sub-Read; arbitrary reaction not necessarily rxActive
-      let $rx: Rx | undefined;
-      // eslint-disable-next-line no-cond-assign
-      if ($rx = rxTokenMap.get(args[0] as SubToken)) {
-        if ($rx.pr.has(vocal)) {
-          throw new Error(`Mixed pr/sr ${vocal.id}`);
+        // Case: Sub-Read; arbitrary reaction not necessarily rxActive
+        let $rx: Rx | undefined;
+        // eslint-disable-next-line no-cond-assign
+        if ($rx = rxTokenMap.get(args[0] as SubToken)) {
+          if ($rx.pr.has(vocal)) {
+            throw new Error(`Mixed pr/sr ${vocal.id}`);
+          }
+          $rx.sr.add(vocal);
+          vocal.rx.add($rx);
+          return saved;
         }
-        $rx.sr.add(vocal);
-        vocal.rx.add($rx);
-        return saved;
-      }
-      // Case: Transaction (is V)
-      if (transactionBatch) {
-        transactionBatch.add(vocal);
-        vocal.next = args[0] as V;
-        // Don't write. Defer until the transaction commit
-        return;
-      }
-      // Case: Write (is V)
-      saved = args[0] as V;
-      // Create a copy of vocal.rx since it can be written to by calling _rxRun
-      // which leads to an infinite loop. Calls are ordered by depth, so I need
-      // an array; Sinuous uses a Set() for this
-      const toRun = [...vocal.rx].sort((a, b) => a.depth - b.depth);
-      // Ordered by parent->child
-      toRun.forEach(rx => {
-        if (rx.state === STATE_PAUSED) rx.state = STATE_PAUSED_STALE;
-        else if (rx.state === STATE_ON) _rxRun(rx);
-      });
-      // Boxes don't return the value on write, unlike Sinuous/S.js
-    }) as Vocal<V>;
-    vocal.id = `vocal-${vocalId++}-${k}`;
-    vocal.rx = new Set<Rx>();
+        // Case: Transaction (is V)
+        if (transactionBatch) {
+          transactionBatch.add(vocal);
+          vocal.next = args[0] as V;
+          // Don't write. Defer until the transaction commit
+          return;
+        }
+        // Case: Write (is V)
+        saved = args[0] as V;
+        // Create a copy of vocal.rx since it can be written to by calling _rxRun
+        // which leads to an infinite loop. Calls are ordered by depth, so I need
+        // an array; Sinuous uses a Set() for this
+        const toRun = [...vocal.rx].sort((a, b) => a.depth - b.depth);
+        // Ordered by parent->child
+        toRun.forEach(rx => {
+          if (rx.state === STATE_PAUSED) rx.state = STATE_PAUSED_STALE;
+          else if (rx.state === STATE_ON) _rxRun(rx);
+        });
+        // Vocals don't return the value on write, unlike Sinuous/S.js
+      },
+      ...res,
+    };
     // @ts-ignore
-    o[k] = vocal;
-  });
-  return (o as unknown as { [P in keyof T]: Vocal<T[P]> });
-};
+    (res[k] as Vocal<V>).id = `vocal-${vocalId++}-${k}`;
+    // @ts-ignore
+    (res[k] as Vocal<V>).rx = new Set<Rx>();
+    return res;
+  }, {} as R);
 
 const transaction = <T>(fn: () => T): T => {
   const prev = transactionBatch;
