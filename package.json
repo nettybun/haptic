@@ -13,7 +13,7 @@
   },
   "scripts": {
     "build": "node build.js",
-    "size:each": "cd publish; find . -name 'index.js' | xargs -I @ bash -c 'printf \"%15s | %5s min+gzip bytes\n\" @ \"$(cat @ | gzip -9 | wc -c)\"'",
+    "size:each": "cd publish; find . -name 'index.js' | xargs -I @ bash -c 'printf \"%15s | %5s min+gzip bytes\n\" @ \"$(head -n1 @ | gzip -9 | wc -c)\"'",
     "size:bundle": "echo $(esbuild --bundle src/index.ts --format=esm --minify | gzip -9 | wc -c) min+gzip bytes"
   },
   "devDependencies": {

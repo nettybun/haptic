@@ -161,6 +161,7 @@ const vocalsCreate = <T extends Obj>(o: T): ObjVocal<T> => {
   type V = T[keyof T];
   Object.keys(o).forEach(k => {
     let saved = o[k];
+    let $rx: Rx | undefined;
     // This preserves the function name, which is important for debugging
     // Excuse the awkward wrapper and indentation hack
     const id = `vocal#${vocalId++}(${k})`;
@@ -176,7 +177,6 @@ const vocalsCreate = <T extends Obj>(o: T): ObjVocal<T> => {
         return saved;
       }
       // Case: Sub-Read; arbitrary reaction not necessarily rxActive
-      let $rx: Rx | undefined;
       // eslint-disable-next-line no-cond-assign
       if ($rx = rxTokenMap.get(args[0] as SubToken)) {
         if ($rx.pr.has(vocal)) {
