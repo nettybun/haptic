@@ -59,8 +59,6 @@ type Rx = {
   runs: number;
   depth: number;
   state: RxState;
-  pause: () => void;
-  unsubscribe: () => void;
 }
 
 // Symbol doesn't gzip well. Only used as a WeakMap key
@@ -83,8 +81,8 @@ let rxActive: Rx | undefined;
 // Vocals written to during a transaction(() => {...})
 let transactionBatch: Set<Vocal<X>> | undefined;
 
-// Registry of reactions
-const rxKnown = new Set<Rx>();
+// Registry is a Set, not WeakSet, because it should be iterable
+const rxRegistry = new Set<Rx>();
 const rxTokenMap = new WeakMap<SubToken, Rx>();
 
 // Unique value to compare with `===` since Symbol() doesn't gzip well
@@ -110,11 +108,9 @@ const rxCreate = (fn: ($: SubToken) => unknown): Rx => {
   rx.fn = fn;
   rx.runs = 0;
   rx.depth = rxActive ? rxActive.depth + 1 : 0;
-  rx.pause = () => _rxPause(rx);
-  rx.unsubscribe = () => _rxUnsubscribe(rx);
-  rxKnown.add(rx);
+  rxRegistry.add(rx);
   if (rxActive) rxActive.inner.add(rx);
-  _rxUnsubscribe(rx);
+  rxUnsubscribe(rx);
   return rx;
 };
 
@@ -129,7 +125,7 @@ const _rxRun = (rx: Rx): void => {
   } else {
     // Symmetrically remove all connections from rx/vocals. This is "automatic
     // memory management" in Sinuous/S.js
-    _rxUnsubscribe(rx);
+    rxUnsubscribe(rx);
     rx.state = STATE_RUNNING;
     const $: SubToken = [];
     // Token is set but never deleted since it's a WeakMap
@@ -142,12 +138,12 @@ const _rxRun = (rx: Rx): void => {
     : STATE_OFF;
 };
 
-const _rxUnsubscribe = (rx: Rx): void => {
+const rxUnsubscribe = (rx: Rx): void => {
   rx.state = STATE_OFF;
   // This is skipped for newly created reactions
   if (rx.runs) {
     // These are only defined once the reaction has been setup and run before
-    rx.inner.forEach(_rxUnsubscribe);
+    rx.inner.forEach(rxUnsubscribe);
     rx.sr.forEach(v => v.rx.delete(rx));
   }
   rx.sr = new Set();
@@ -155,9 +151,9 @@ const _rxUnsubscribe = (rx: Rx): void => {
   rx.inner = new Set();
 };
 
-const _rxPause = (rx: Rx) => {
+const rxPause = (rx: Rx) => {
   rx.state = STATE_PAUSED;
-  rx.inner.forEach(_rxPause);
+  rx.inner.forEach(rxPause);
 };
 
 const vocalsCreate = <T extends Obj>(o: T): ObjVocal<T> => {
@@ -193,7 +189,7 @@ const vocalsCreate = <T extends Obj>(o: T): ObjVocal<T> => {
       if (transactionBatch) {
         transactionBatch.add(vocal);
         vocal.next = args[0] as V;
-        // Don't write. Defer until the transaction commit
+        // Don't write/save. Defer until the transaction commit
         return;
       }
       // Case: Write (is V)
@@ -251,5 +247,13 @@ const adopt = <T>(rxParent: Rx, fn: () => T): T => {
   return value as T;
 };
 
-export { rxCreate as rx, vocalsCreate as vocals, transaction, adopt, rxKnown, rxStates };
+export {
+  rxRegistry,
+  rxCreate as rx,
+  rxUnsubscribe,
+  rxPause,
+  vocalsCreate as vocals,
+  transaction,
+  adopt
+};
 export type { Rx, Vocal, SubToken };
