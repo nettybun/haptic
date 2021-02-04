@@ -85,21 +85,13 @@ let transactionBatch: Set<Vocal<X>> | undefined;
 const rxRegistry = new Set<Rx>();
 const rxTokenMap = new WeakMap<SubToken, Rx>();
 
-// Unique value to compare with `===` since Symbol() doesn't gzip well
-const STATE_ON           = [] as const;
-const STATE_RUNNING      = [] as const;
-const STATE_PAUSED       = [] as const;
-const STATE_PAUSED_STALE = [] as const;
-const STATE_OFF          = [] as const;
-
-// Tree-shaken: Not part of your bundle unless you import it for debugging
-const rxStates = new Map<RxState, string>([
-  [STATE_ON,           'STATE_ON'          ],
-  [STATE_RUNNING,      'STATE_RUNNING'     ],
-  [STATE_PAUSED,       'STATE_PAUSED'      ],
-  [STATE_PAUSED_STALE, 'STATE_PAUSED_STALE'],
-  [STATE_OFF,          'STATE_OFF'         ],
-]);
+// Symbol() doesn't gzip well. `[] as const` gzips best at 1479 but isn't
+// debuggable without a lookup Map<> and other hacks. This is 1481.
+const STATE_OFF          = 0;
+const STATE_ON           = 1;
+const STATE_RUNNING      = 2;
+const STATE_PAUSED       = 3;
+const STATE_PAUSED_STALE = 4;
 
 const rxCreate = (fn: ($: SubToken) => unknown): Rx => {
   const id = `rx#${reactionId++}(${fn.name})`;
