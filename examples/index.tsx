@@ -1,5 +1,5 @@
 import { h } from '../src';
-import { rxKnown, rxStates, vocals, rx } from '../src/v';
+import { rxRegistry, vocals, rx } from '../src/v';
 
 const data = vocals({
   text: '',
@@ -32,10 +32,18 @@ const Page = () =>
         ? Math.PI * data.count($)
         : `Text: "${data.text($)}" is ${data.text($).length} chars`)}
     </p>
+    <p>Here's math again as $(v, v):
+      {rx($ => {
+        const [c, t] = $(data.count, data.text);
+        return (c < 5
+          ? Math.PI * c
+          : `Text: "${t}" is ${t.length} chars`);
+      })}
+    </p>
     <p>Functions that aren't reactions??? {() => <span>WHOA DAMN SERIALIZED!</span>}</p>
     <button onClick={() => {
       const reg: Record<string, unknown> = {};
-      rxKnown.forEach(rx => {
+      rxRegistry.forEach(rx => {
         reg[rx.name] = {
           /* eslint-disable key-spacing */
           fn   : rx.fn.name,
@@ -44,7 +52,13 @@ const Page = () =>
           inner: [...rx.inner].map(x => x.name),
           runs : rx.runs,
           depth: rx.depth,
-          state: rxStates.get(rx.state) || '?',
+          state: [
+            'STATE_OFF',
+            'STATE_ON',
+            'STATE_RUNNING',
+            'STATE_PAUSED',
+            'STATE_PAUSED_STALE',
+          ][rx.state],
         };
       });
       console.log(reg);
@@ -58,5 +72,3 @@ const Page = () =>
 
 document.body.innerHTML = '';
 document.body.appendChild(<Page/>);
-
-// console.log(data.count($)); // TODO: Is this less awkward syntax?
