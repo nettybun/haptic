@@ -62,7 +62,9 @@ type Rx = {
 }
 
 // Symbol doesn't gzip well. Only used as a WeakMap key
-type SubToken = [];
+// Using Array<Vocal<T>> doesn't work
+type SubToken = <T, X extends Array<() => T>>(...args: X) => UnpackVocalArrayType<X>;
+type UnpackVocalArrayType<T> = { [P in keyof T]: T[P] extends Vocal<infer U> ? U : never };
 
 type Vocal<T> = {
   (): T;
@@ -119,7 +121,8 @@ const _rxRun = (rx: Rx): void => {
     // memory management" in Sinuous/S.js
     rxUnsubscribe(rx);
     rx.state = STATE_RUNNING;
-    const $: SubToken = [];
+    // @ts-ignore It's not happy with this but the typing is correct
+    const $: SubToken = ((...vocals) => vocals.map(v => v($)));
     // Token is set but never deleted since it's a WeakMap
     rxTokenMap.set($, rx);
     adopt(rx, () => rx.fn($));
