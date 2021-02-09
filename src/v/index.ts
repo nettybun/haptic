@@ -95,10 +95,36 @@ const STATE_RUNNING      = 2;
 const STATE_PAUSED       = 3;
 const STATE_PAUSED_STALE = 4;
 
+// In rxCreate and vocalCreate `{ [id]() {} }[id]` preserves the function name
+// which is useful for debugging
+
 const rxCreate = (fn: ($: SubToken) => unknown): Rx => {
   const id = `rx#${reactionId++}(${fn.name})`;
   // @ts-ignore sr,pr,inner,state are setup by _rxUnsubscribe() below
-  const rx: Rx = { [id]() { _rxRun(rx); } }[id];
+  const rx: Rx = { [id]() {
+    if (rx.state === STATE_RUNNING) {
+      throw new Error(`Loop ${rx.name}`);
+    }
+    // If STATE_PAUSED then STATE_PAUSED_STALE was never reached; nothing has
+    // changed. Restore state (below) and call inner reactions so they can check
+    if (rx.state === STATE_PAUSED) {
+      rx.inner.forEach(_rx => _rx());
+    } else {
+      // Symmetrically remove all connections from rx/vocals. This is "automatic
+      // memory management" in Sinuous/S.js
+      rxUnsubscribe(rx);
+      rx.state = STATE_RUNNING;
+      // @ts-ignore It's not happy with this but the typing is correct
+      const $: SubToken = ((...vocals) => vocals.map(v => v($)));
+      // Token is set but never deleted since it's a WeakMap
+      rxTokenMap.set($, rx);
+      adopt(rx, () => rx.fn($));
+      rx.runs++;
+    }
+    rx.state = rx.sr.size
+      ? STATE_ON
+      : STATE_OFF;
+  } }[id];
   rx.fn = fn;
   rx.runs = 0;
   rx.depth = rxActive ? rxActive.depth + 1 : 0;
@@ -108,36 +134,10 @@ const rxCreate = (fn: ($: SubToken) => unknown): Rx => {
   return rx;
 };
 
-const _rxRun = (rx: Rx): void => {
-  if (rx.state === STATE_RUNNING) {
-    throw new Error(`Loop ${rx.name}`);
-  }
-  // If STATE_PAUSED then STATE_PAUSED_STALE was never reached; nothing has
-  // changed. Restore state (below) and call inner reactions so they can check
-  if (rx.state === STATE_PAUSED) {
-    rx.inner.forEach(_rxRun);
-  } else {
-    // Symmetrically remove all connections from rx/vocals. This is "automatic
-    // memory management" in Sinuous/S.js
-    rxUnsubscribe(rx);
-    rx.state = STATE_RUNNING;
-    // @ts-ignore It's not happy with this but the typing is correct
-    const $: SubToken = ((...vocals) => vocals.map(v => v($)));
-    // Token is set but never deleted since it's a WeakMap
-    rxTokenMap.set($, rx);
-    adopt(rx, () => rx.fn($));
-    rx.runs++;
-  }
-  rx.state = rx.sr.size
-    ? STATE_ON
-    : STATE_OFF;
-};
-
 const rxUnsubscribe = (rx: Rx): void => {
   rx.state = STATE_OFF;
-  // This is skipped for newly created reactions
+  // Skip newly created reactions since inner/sr aren't yet defined
   if (rx.runs) {
-    // These are only defined once the reaction has been setup and run before
     rx.inner.forEach(rxUnsubscribe);
     rx.sr.forEach(v => v.rx.delete(rx));
   }
@@ -155,10 +155,8 @@ const vocalsCreate = <T extends Obj>(o: T): ObjVocal<T> => {
   type V = T[keyof T];
   Object.keys(o).forEach(k => {
     let saved = o[k];
-    let $rx: Rx | undefined;
-    // This preserves the function name, which is important for debugging
-    // Excuse the awkward wrapper and indentation hack
-    const id = `vocal#${vocalId++}(${k})`;
+    // Batch the vocalId since key k will be unique
+    const id = `vocal#${vocalId}(${k})`;
     const vocal = { [id](...args: (V | SubToken)[]) {
       // Case: Pass-Read
       if (!args.length) {
@@ -171,6 +169,7 @@ const vocalsCreate = <T extends Obj>(o: T): ObjVocal<T> => {
         return saved;
       }
       // Case: Sub-Read; arbitrary reaction not necessarily rxActive
+      let $rx: Rx | undefined;
       // eslint-disable-next-line no-cond-assign
       if ($rx = rxTokenMap.get(args[0] as SubToken)) {
         if ($rx.pr.has(vocal)) {
@@ -196,7 +195,7 @@ const vocalsCreate = <T extends Obj>(o: T): ObjVocal<T> => {
       // Ordered by parent->child
       toRun.forEach(rx => {
         if (rx.state === STATE_PAUSED) rx.state = STATE_PAUSED_STALE;
-        else if (rx.state === STATE_ON) _rxRun(rx);
+        else if (rx.state === STATE_ON) rx();
       });
       // Vocals don't return the value on write, unlike Sinuous/S.js
     } }[id] as Vocal<V>;
@@ -204,6 +203,7 @@ const vocalsCreate = <T extends Obj>(o: T): ObjVocal<T> => {
     // @ts-ignore
     o[k] = vocal;
   });
+  vocalId++;
   return o as ObjVocal<T>;
 };
 
