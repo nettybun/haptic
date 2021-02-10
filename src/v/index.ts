@@ -1,40 +1,5 @@
 // Vocal
 
-// Reactivity engine for Haptic. Replaces the previous haptic/s implementation
-// of an "observer pattern" and addresses many of the pitfalls of writing
-// reactive code. There's a lot more code here but after a lot of golfing it's
-// only slightly larger min+gzipped at 682 bytes over the previous 548 bytes.
-
-// In haptic/s, like Sinuous/S.js, subscriptions are created implicitly when a
-// signal is read. You needed to know ahead of time if a function was safe to
-// call inside a computed() or if it needed sample() to avoid an accidental
-// subscription. This meant it was too easy setup signals in an infinite loop,
-// which is hard to debug since the browser locks up. If an error was thrown in
-// a computed then system state was invalid and future computeds could be wrong.
-// Everything is emitted as an anonymous function, which makes it harder to
-// debugging who's calling who. Lastly, it's conceptually confusing for people
-// to differentiate between signals, computeds, and subscriptions.
-
-// Subscriptions are explicit in haptic/v. Reading a value as `v.userCount()` is
-// passive (pass-read; pr) while subscribing (sub-read; sr) uses a unique "$"
-// token as `v.userCount($)`. This token is created when defining a reaction. It
-// follows that nested functions are explicit too since $ needs to be given as a
-// parameter. To help consistency, sr/pr reads can't be mixed for a value in a
-// reaction. Fixing other issues: code is run in try/catch blocks to keep the
-// system recoverable; there's only values and reactions, which are unambiguous
-// since reactions can't store data but values can.
-
-// There's the usual support for transactions and for re-parenting nested
-// reactions (called `adopt` instead of `root`).
-
-// New features: Reactions can pause without undoing subscriptions; which is
-// useful to efficiently skip DOM updates for any elements that are off-screen.
-// There's a push to help inspecting/debugging: All values and reactions have a
-// good Function.name (which includes a counter) to ID them. This is used in
-// error messages. Reactions are implemented as state machines so they can't
-// loop; they're stored in a global Set<Rx> registry; and they track how many
-// times they've ran.
-
 /* eslint-disable no-multi-spaces */
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 type X = any;
