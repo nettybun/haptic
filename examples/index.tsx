@@ -1,13 +1,13 @@
 import { h } from '../src';
-import { rxRegistry, vocals, rx } from '../src/v';
+import { reactorRegistry, wireValues, wR } from '../src/v';
 
-const data = vocals({
+const data = wireValues({
   text: '',
   count: 0,
   registryContent: '',
 });
 
-const localRx = rx($ => {
+const localDef = wR($ => {
   const content = data.registryContent($);
   return `The registry content is ${content.length} long now at ${new Date().toLocaleTimeString()}`;
 });
@@ -15,50 +15,49 @@ const localRx = rx($ => {
 const Page = () =>
   <main>
     {/* I think this is ok. Haptic will monkey-patch the fn to extract its return value */}
-    <p>This has been clicked {rx(data.count)} times</p>
+    <p>This has been clicked {wR(data.count)} times</p>
     <input
       placeholder='Type something...'
-      value={rx(data.text)}
+      value={wR(data.text)}
       // @ts-ignore TODO:
       onKeyUp={ev => {
-        // @ts-ignore TODO:
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         data.text(ev.target.value);
       }}
       style='display:block'/>
     <button onClick={() => data.count(data.count() + 1)}>Inc</button>
     <p>Here's math:
-      {rx($ => data.count($) < 5
+      {wR($ => data.count($) < 5
         ? Math.PI * data.count($)
         : `Text: "${data.text($)}" is ${data.text($).length} chars`)}
     </p>
     <p>Here's math again as $(v, v):
-      {rx($ => {
-        const [c, t] = $(data.count, data.text);
-        return (c < 5
-          ? Math.PI * c
-          : `Text: "${t}" is ${t.length} chars`);
+      {wR($ => {
+        const [count, text] = $(data.count, data.text);
+        return (count < 5
+          ? Math.PI * count
+          : `Text: "${text}" is ${text.length} chars`);
       })}
     </p>
     <p>Functions that aren't reactions??? {() => <span>WHOA DAMN SERIALIZED!</span>}</p>
     <button onClick={() => {
       const reg: Record<string, unknown> = {};
-      rxRegistry.forEach(rx => {
-        reg[rx.name] = {
+      reactorRegistry.forEach(reactor => {
+        reg[reactor.name] = {
           /* eslint-disable key-spacing */
-          fn   : rx.fn.name,
-          sr   : [...rx.sr].map(x => x.name),
-          pr   : [...rx.pr].map(x => x.name),
-          inner: [...rx.inner].map(x => x.name),
-          runs : rx.runs,
-          depth: rx.depth,
+          fn   : reactor.fn.name,
+          wVsr : [...reactor.wVsr].map(x => x.name),
+          wVpr : [...reactor.wVpr].map(x => x.name),
+          wR   : [...reactor.wR].map(x => x.name),
+          runs : reactor.runs,
+          depth: reactor.depth,
           state: [
-            'STATE_OFF',
-            'STATE_ON',
-            'STATE_RUNNING',
-            'STATE_PAUSED',
-            'STATE_PAUSED_STALE',
-          ][rx.state],
+            'OFF',
+            'ON',
+            'RUNNING',
+            'PAUSED',
+            'PAUSED_STALE',
+          ][reactor.state],
         };
       });
       console.log(reg);
@@ -66,8 +65,8 @@ const Page = () =>
     }}>
       Load rx registry
     </button>
-    <p>{localRx}</p>
-    <pre>{rx(data.registryContent)}</pre>
+    <p>{localDef}</p>
+    <pre>{wR(data.registryContent)}</pre>
   </main>;
 
 document.body.innerHTML = '';
