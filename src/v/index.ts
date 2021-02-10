@@ -1,56 +1,57 @@
-// Vocal
+// Haptic Wire
 
 /* eslint-disable no-multi-spaces */
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 type X = any;
-type Obj = { [k: string]: unknown };
-type ObjVocal<T extends Obj> = { [P in keyof T]: Vocal<T[P]>; }
+type O = { [k: string]: unknown };
 
-type RxState =
+// Reactors don't use their function's return value, but it's useful to monkey
+// patch them after creation. Haptic does this for h()
+type WireReactor<T = void> = {
+  (): T;
+  fn: ($: SubToken) => unknown;
+  /** Sub-read values from last run */
+  wVsr: Set<WireValue<X>>;
+  /** Pass-read values from last run */
+  wVpr: Set<WireValue<X>>;
+  /** Inner/children reactors */
+  wR: Set<WireReactor>;
+  depth: number;
+  runs: number;
+  state: WireReactorStates;
+};
+
+type WireReactorStates =
   | typeof STATE_ON
   | typeof STATE_RUNNING
   | typeof STATE_PAUSED
   | typeof STATE_PAUSED_STALE
   | typeof STATE_OFF;
 
-type Rx = {
-  (): undefined;
-  // This *can* return something which is useful for monkey-patching the
-  // reaction after its been created
-  fn: ($: SubToken) => unknown;
-  sr: Set<Vocal<X>>;
-  pr: Set<Vocal<X>>;
-  inner: Set<Rx>;
-  runs: number;
-  depth: number;
-  state: RxState;
-}
+type UnpackArrayWireValueTypes<T> = { [P in keyof T]: T[P] extends WireValue<infer U> ? U : never };
+type SubToken = <T, X extends Array<() => T>>(...args: X) => UnpackArrayWireValueTypes<X>;
 
-// Symbol doesn't gzip well. Only used as a WeakMap key
-// Using Array<Vocal<T>> doesn't work
-type SubToken = <T, X extends Array<() => T>>(...args: X) => UnpackVocalArrayType<X>;
-type UnpackVocalArrayType<T> = { [P in keyof T]: T[P] extends Vocal<infer U> ? U : never };
-
-type Vocal<T> = {
+type WireValue<T> = {
   (): T;
   ($: SubToken): T;
   (value: T): void;
-  rx: Set<Rx>;
-  // This property doesn't exist some of the time
+  /** Reactors subscribed to this value */
+  wR: Set<WireReactor>;
+  /** Uncommitted value set during a transaction() block */
   next?: T;
-}
+};
 
-let vocalId = 0;
-let reactionId = 0;
+let wValueId = 0;
+let wReactorId = 0;
 
-// Current reaction
-let rxActive: Rx | undefined;
-// Vocals written to during a transaction(() => {...})
-let transactionBatch: Set<Vocal<X>> | undefined;
+// Currently running reactor
+let reactorActive: WireReactor | undefined;
+// WireValues written to during a transaction(() => {...})
+let transactionBatch: Set<WireValue<X>> | undefined;
 
 // Registry is a Set, not WeakSet, because it should be iterable
-const rxRegistry = new Set<Rx>();
-const rxTokenMap = new WeakMap<SubToken, Rx>();
+const reactorRegistry = new Set<WireReactor>();
+const reactorTokenMap = new WeakMap<SubToken, WireReactor>();
 
 // Symbol() doesn't gzip well. `[] as const` gzips best at 1479 but isn't
 // debuggable without a lookup Map<> and other hacks. This is 1481.
@@ -60,160 +61,162 @@ const STATE_RUNNING      = 2;
 const STATE_PAUSED       = 3;
 const STATE_PAUSED_STALE = 4;
 
-// In rxCreate and vocalCreate `{ [id]() {} }[id]` preserves the function name
+// In wireValue and wireReactor `{ [id]() {} }[id]` preserves the function name
 // which is useful for debugging
 
-const rxCreate = (fn: ($: SubToken) => unknown): Rx => {
-  const id = `rx#${reactionId++}(${fn.name})`;
-  // @ts-ignore sr,pr,inner,state are setup by _rxUnsubscribe() below
-  const rx: Rx = { [id]() {
-    if (rx.state === STATE_RUNNING) {
-      throw new Error(`Loop ${rx.name}`);
+const wireReactor = (fn: ($: SubToken) => unknown): WireReactor => {
+  const id = `wR#${wReactorId++}(${fn.name})`;
+  // @ts-ignore sr,pr,inner,state are setup by reactorUnsubscribe() below
+  const wR: WireReactor = { [id]() {
+    if (wR.state === STATE_RUNNING) {
+      throw new Error(`Loop ${wR.name}`);
     }
     // If STATE_PAUSED then STATE_PAUSED_STALE was never reached; nothing has
-    // changed. Restore state (below) and call inner reactions so they can check
-    if (rx.state === STATE_PAUSED) {
-      rx.inner.forEach(_rx => _rx());
+    // changed. Restore state (below) and call inner reactors so they can check
+    if (wR.state === STATE_PAUSED) {
+      wR.wR.forEach(reactor => reactor());
     } else {
-      // Symmetrically remove all connections from rx/vocals. This is "automatic
+      // Symmetrically remove all connections from wV/wR. Called "automatic
       // memory management" in Sinuous/S.js
-      rxUnsubscribe(rx);
-      rx.state = STATE_RUNNING;
+      reactorUnsubscribe(wR);
+      wR.state = STATE_RUNNING;
       // @ts-ignore It's not happy with this but the typing is correct
-      const $: SubToken = ((...vocals) => vocals.map(v => v($)));
+      const $: SubToken = ((...wV) => wV.map(sT => sT($)));
       // Token is set but never deleted since it's a WeakMap
-      rxTokenMap.set($, rx);
-      adopt(rx, () => rx.fn($));
-      rx.runs++;
+      reactorTokenMap.set($, wR);
+      adopt(wR, () => wR.fn($));
+      wR.runs++;
     }
-    rx.state = rx.sr.size
+    wR.state = wR.wVsr.size
       ? STATE_ON
       : STATE_OFF;
   } }[id];
-  rx.fn = fn;
-  rx.runs = 0;
-  rx.depth = rxActive ? rxActive.depth + 1 : 0;
-  rxRegistry.add(rx);
-  if (rxActive) rxActive.inner.add(rx);
-  rxUnsubscribe(rx);
-  return rx;
+  wR.fn = fn;
+  wR.runs = 0;
+  wR.depth = reactorActive ? reactorActive.depth + 1 : 0;
+  reactorRegistry.add(wR);
+  if (reactorActive) reactorActive.wR.add(wR);
+  reactorUnsubscribe(wR);
+  return wR;
 };
 
-const rxUnsubscribe = (rx: Rx): void => {
-  rx.state = STATE_OFF;
-  // Skip newly created reactions since inner/sr aren't yet defined
-  if (rx.runs) {
-    rx.inner.forEach(rxUnsubscribe);
-    rx.sr.forEach(v => v.rx.delete(rx));
+const reactorUnsubscribe = (wR: WireReactor): void => {
+  wR.state = STATE_OFF;
+  // Skip newly created reactors since inner/sr aren't yet defined
+  if (wR.runs) {
+    wR.wR.forEach(reactorUnsubscribe);
+    wR.wVsr.forEach(sT => sT.wR.delete(wR));
   }
-  rx.sr = new Set();
-  rx.pr = new Set();
-  rx.inner = new Set();
+  wR.wVsr = new Set();
+  wR.wVpr = new Set();
+  wR.wR = new Set();
 };
 
-const rxPause = (rx: Rx) => {
-  rx.state = STATE_PAUSED;
-  rx.inner.forEach(rxPause);
+const reactorPause = (wR: WireReactor) => {
+  wR.state = STATE_PAUSED;
+  wR.wR.forEach(reactorPause);
 };
 
-const vocalsCreate = <T extends Obj>(o: T): ObjVocal<T> => {
+const wireValues = <T extends O>(obj: T): { [K in keyof T]: WireValue<T[K]>; } => {
   type V = T[keyof T];
-  Object.keys(o).forEach(k => {
-    let saved = o[k];
-    // Batch the vocalId since key k will be unique
-    const id = `vocal#${vocalId}(${k})`;
-    const vocal = { [id](...args: (V | SubToken)[]) {
+  Object.keys(obj).forEach(k => {
+    let saved = obj[k];
+    // Batch the identifier since key k will be unique
+    const id = `wV#${wValueId}(${k})`;
+    const wV = { [id](...args: (V | SubToken)[]) {
       // Case: Pass-Read
       if (!args.length) {
-        if (rxActive) {
-          if (rxActive.sr.has(vocal)) {
-            throw new Error(`Mixed sr/pr ${vocal.name}`);
+        if (reactorActive) {
+          if (reactorActive.wVsr.has(wV)) {
+            throw new Error(`Mixed sr/pr ${wV.name}`);
           }
-          rxActive.pr.add(vocal);
+          reactorActive.wVpr.add(wV);
         }
         return saved;
       }
-      // Case: Sub-Read; arbitrary reaction not necessarily rxActive
-      let $rx: Rx | undefined;
+      // Case: Sub-Read; could be any reactor not necessarily `reactorActive`
+      let reactorFound: WireReactor | undefined;
       // eslint-disable-next-line no-cond-assign
-      if ($rx = rxTokenMap.get(args[0] as SubToken)) {
-        if ($rx.pr.has(vocal)) {
-          throw new Error(`Mixed pr/sr ${vocal.name}`);
+      if (reactorFound = reactorTokenMap.get(args[0] as SubToken)) {
+        if (reactorFound.wVpr.has(wV)) {
+          throw new Error(`Mixed pr/sr ${wV.name}`);
         }
-        $rx.sr.add(vocal);
-        vocal.rx.add($rx);
+        reactorFound.wVsr.add(wV);
+        wV.wR.add(reactorFound);
         return saved;
       }
       // Case: Transaction (is V)
       if (transactionBatch) {
-        transactionBatch.add(vocal);
-        vocal.next = args[0] as V;
+        transactionBatch.add(wV);
+        wV.next = args[0] as V;
         // Don't write/save. Defer until the transaction commit
         return;
       }
       // Case: Write (is V)
       saved = args[0] as V;
-      // Create a copy of vocal.rx since it can be written to by calling _rxRun
-      // which leads to an infinite loop. Calls are ordered by depth, so I need
-      // an array; Sinuous uses a Set() for this
-      const toRun = [...vocal.rx].sort((a, b) => a.depth - b.depth);
+      // Create a copy of wV's reactors since the Set can be added to during the
+      // call leading to an infinite loop. Also I need to order by depth which
+      // needs an array, but in Sinuous they can use a Set()
+      const toRun = [...wV.wR].sort((a, b) => a.depth - b.depth);
       // Ordered by parent->child
-      toRun.forEach(rx => {
-        if (rx.state === STATE_PAUSED) rx.state = STATE_PAUSED_STALE;
-        else if (rx.state === STATE_ON) rx();
+      toRun.forEach(wR => {
+        if (wR.state === STATE_PAUSED) wR.state = STATE_PAUSED_STALE;
+        else if (wR.state === STATE_ON) wR();
       });
-      // Vocals don't return the value on write, unlike Sinuous/S.js
-    } }[id] as Vocal<V>;
-    vocal.rx = new Set<Rx>();
+      // Don't return the value on write, unlike Sinuous/S.js
+    } }[id] as WireValue<V>;
+    wV.wR = new Set<WireReactor>();
     // @ts-ignore
-    o[k] = vocal;
+    obj[k] = wV;
   });
-  vocalId++;
-  return o as ObjVocal<T>;
+  wValueId++;
+  return obj as { [K in keyof T]: WireValue<T[K]>; };
 };
 
 const transaction = <T>(fn: () => T): T => {
   const prev = transactionBatch;
   transactionBatch = new Set();
   let error: unknown;
-  let value: unknown;
+  let ret: unknown;
   try {
-    value = fn();
+    ret = fn();
   } catch (err) {
     error = err;
   }
-  const vocals = transactionBatch;
+  const values = transactionBatch;
   transactionBatch = prev;
   if (error) throw error;
-  vocals.forEach(v => {
-    v(v.next);
-    delete v.next;
+  values.forEach(wV => {
+    wV(wV.next);
+    delete wV.next;
   });
-  return value as T;
+  return ret as T;
 };
 
-const adopt = <T>(rxParent: Rx, fn: () => T): T => {
-  const prev = rxActive;
-  rxActive = rxParent;
+const adopt = <T>(reactorParent: WireReactor, fn: () => T): T => {
+  const prev = reactorActive;
+  reactorActive = reactorParent;
   let error: unknown;
-  let value: unknown;
+  let ret: unknown;
   try {
-    value = fn();
+    ret = fn();
   } catch (err) {
     error = err;
   }
-  rxActive = prev;
+  reactorActive = prev;
   if (error) throw error;
-  return value as T;
+  return ret as T;
 };
 
 export {
-  rxRegistry,
-  rxCreate as rx,
-  rxUnsubscribe,
-  rxPause,
-  vocalsCreate as vocals,
+  wireValues,
+  wireValues as wV,
+  wireReactor,
+  wireReactor as wR,
+  reactorRegistry,
+  reactorUnsubscribe,
+  reactorPause,
   transaction,
   adopt
 };
-export type { Rx, Vocal, SubToken };
+export type { WireValue, WireReactor, WireReactorStates, SubToken };

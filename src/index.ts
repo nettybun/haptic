@@ -1,18 +1,18 @@
-// Haptic is a bundle of haptic/h that looks for haptic/v at runtime to use as
-// the reactivity engine. You access haptic/v on its own:
+// Haptic is a bundle of haptic/h and haptic/w as the reactivity engine. You
+// access haptic/w on its own:
 
 // import { h } from 'haptic';
-// import { vocals, rx } from 'haptic/v';
+// import { wireValues, wireReactor } from 'haptic/w';
 
-// This bundles 2 utilities, svg() and when(), and extends the JSX namespace to
-// allow using Vocal and Rx types in JSX. Import haptic/h to use a vanilla JSX
-// namespace or to use other reactivity libraries such as sinuous/observable,
-// haptic/s, hyperactiv, or mobx
+// The bundle includes 2 utilities, svg() and when(), and extends the JSX
+// namespace to allow using WireReactors. Use haptic/h directly to use a vanilla
+// JSX namespace or to extend it for other reactive libraries such as
+// sinuous/observable, haptic/s, hyperactiv, or mobx
 
-// The 'haptic' package as a bundle doesn't embed haptic/v, so code will only be
+// The 'haptic' package as a bundle doesn't embed haptic/w, so code will only be
 // loaded once despite having two import sites. This should work well for both
 // bundlers and unbundled (ESM-only; Snowpack/UNPKG) workflows. It's important
-// to only run one instance of haptic/v because reactivity depends on accessing
+// to only run one instance of haptic/w because reactivity depends on accessing
 // some shared global state that is setup during import.
 
 import { h, api } from './h';
