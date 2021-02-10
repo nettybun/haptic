@@ -16,27 +16,25 @@
 // some shared global state that is setup during import.
 
 import { h, api } from './h';
-import { rx, adopt } from './v';
+import { wR, adopt, reactorPause } from './v';
 
-import type { Rx, SubToken } from './v';
+import type { WireValue, WireReactor } from './v';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
 type El = Element | Node | DocumentFragment;
 type Component = (...args: unknown[]) => El;
 
-api.rxTest = (expr) => {
-  // To be very explicit I'd do rxKnown.has(expr) but that's likely expensive
-  return typeof expr === 'function' && expr.name.startsWith('rx');
+api.patchTest = (expr) => {
+  // To be very explicit I'd do reactorRegistry.has(expr) but that's expensive
+  return typeof expr === 'function' && expr.name.startsWith('wR');
 };
 
 // This can more easily be passed the element, attribute, endMark, etc.
-api.rxHandler = (expr, updateCallback) => {
-  const rx = expr as Rx;
-  const prevFn = rx.fn;
-  // TODO: Doesn't exist...
-  // rx.id = `dom-${rx.id}`;
-  rx.fn = $ => {
-    // Extract the return value from the rx.fn and update the DOM with it
+api.patchHandler = (expr, updateCallback) => {
+  const reactor = expr as WireReactor;
+  const prevFn = reactor.fn;
+  reactor.fn = $ => {
+    // Extract the return value from the reactor.fn and update the DOM with it
     const value = prevFn($);
     updateCallback(value);
 
@@ -47,7 +45,7 @@ api.rxHandler = (expr, updateCallback) => {
   };
   // console.log('Call rx', rx.id);
   // Reactions are lazy so call that value now! (and to init subscriptions!)
-  rx();
+  reactor();
 };
 
 /** Utility: Renders SVGs by setting h() to the SVG namespace */
@@ -61,30 +59,30 @@ const svg = <T extends () => Element>(closure: T): ReturnType<T> => {
 
 /** Utility: Switches content when the vocal in `condition` is updated */
 const when = <T extends string>(
-  condition: ($: SubToken) => T,
+  condition: WireValue<T>,
   views: { [k in T]?: Component }
-): ($: SubToken) => El | undefined => {
+): WireReactor => {
   const renderedEl = {} as { [k in T]?: El };
-  const renderedRx = {} as { [k in T]?: Rx };
+  const renderedRx = {} as { [k in T]?: WireReactor };
   let condActive: T;
-  return $ => {
+  return wR($ => {
     const cond = condition($);
     if (cond !== condActive && views[cond]) {
-      // Tick. Pause reactions. Keep DOM intact.
-      (renderedRx[condActive] as Rx).pause();
+      // Tick. Pause reactors and keep DOM intact
+      reactorPause(renderedRx[condActive] as WireReactor);
       condActive = cond;
       // Rendered?
       if (renderedEl[cond]) {
-        // Then unpause. If nothing has changed then no sr/pr links change
-        (renderedRx[cond] as Rx)();
+        // Then unpause. If nothing has changed then no wVsr/wVpr links change
+        (renderedRx[cond] as WireReactor)();
       }
       // Able to render?
-      const parent = rx(() => {});
+      const parent = wR(() => {});
       renderedEl[cond] = adopt(parent, () => h(views[cond] as Component));
       renderedRx[cond] = parent;
     }
     return renderedEl[cond];
-  };
+  });
 };
 
 export { h, api, svg, when };

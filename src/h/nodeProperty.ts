@@ -34,13 +34,12 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
       api.property(el, (value as { [k: string]: unknown })[name], name, isAttr, isCss);
     }
   }
-  else if (name[0] === 'o' && name[1] === 'n' && !(value as { $o?: 1 }).$o) {
-    // Functions added as event handlers are not executed on render unless they
-    // have an observable indicator
+  // Functions added as event handlers are not executed on render
+  else if (name[0] === 'o' && name[1] === 'n') {
     handleEvent(el, name, value as EventHandler);
   }
-  else if (typeof value === 'function' && api.rxTest(value)) {
-    api.rxHandler(value, (v: unknown) => {
+  else if (api.patchTest(value)) {
+    api.patchHandler(value, (v: unknown) => {
       api.property(el, v, name, isAttr, isCss);
     });
   }

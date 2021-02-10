@@ -42,7 +42,7 @@ function h(tag: Tag, ...args: unknown[]): El | undefined {
     else if (Array.isArray(arg)) {
       args.push(...arg);
     }
-    else if (api.rxTest(arg)) {
+    else if (api.patchTest(arg)) {
       // Last parameter, endMark, is a Text('') node; see nodeAdd.js#Frag
       api.insert(el, arg, api.add(el, '') as Text);
     }

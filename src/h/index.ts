@@ -20,8 +20,8 @@ const api = {
   // Renamed for compatibility with Sinuous' community libraries
   rm: remove,
   // Reactivity could be haptic/v, sinuous/observable, mobx, etc
-  rxTest: noop as unknown as (expr: unknown) => boolean,
-  rxHandler: noop as unknown as (expr: unknown, updateCallback: (value: unknown) => void) => void,
+  patchTest: noop as unknown as (expr: unknown) => boolean,
+  patchHandler: noop as unknown as (expr: unknown, updateCallback: (value: unknown) => void) => void,
 };
 
 // Reference the latest internal h() allowing others to customize the call

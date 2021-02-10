@@ -40,8 +40,8 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
     // @ts-expect-error Reusing the variable but doesn't match the signature
     current = value;
   }
-  else if (typeof value === 'function' && api.rxTest(value)) {
-    api.rxHandler(value, (v: unknown) => {
+  else if (api.patchTest(value)) {
+    api.patchHandler(value, (v: unknown) => {
       current = api.insert(el, v, endMark, current, startNode);
     });
   }
