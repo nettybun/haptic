@@ -53,8 +53,8 @@ let transactionBatch: Set<WireValue<X>> | undefined;
 const reactorRegistry = new Set<WireReactor>();
 const reactorTokenMap = new WeakMap<SubToken, WireReactor>();
 
-// Symbol() doesn't gzip well. `[] as const` gzips best at 1479 but isn't
-// debuggable without a lookup Map<> and other hacks. This is 1481.
+// Symbol() doesn't gzip well. `[] as const` gzips best but isn't debuggable
+// without a lookup Map<> and other hacks.
 const STATE_OFF          = 0;
 const STATE_ON           = 1;
 const STATE_RUNNING      = 2;
