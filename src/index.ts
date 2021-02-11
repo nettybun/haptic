@@ -25,8 +25,9 @@ type El = Element | Node | DocumentFragment;
 type Component = (...args: unknown[]) => El;
 
 api.patchTest = (expr) => {
-  // To be very explicit I'd do reactorRegistry.has(expr) but that's expensive
-  return typeof expr === 'function' && expr.name.startsWith('wR');
+  // Perflink benchmark says using reactorRegistry's Set.has() would be ~20%
+  // slower than Function#name's String.startsWith()
+  return typeof expr === 'function' && expr.name.startsWith('wR#');
 };
 
 // This can more easily be passed the element, attribute, endMark, etc.
