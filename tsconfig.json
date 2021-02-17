@@ -6,6 +6,7 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "strict": true,
+    "noUncheckedIndexedAccess": true,
     "outDir": "publish",
     "jsx": "preserve",
     "jsxFactory": "h"
