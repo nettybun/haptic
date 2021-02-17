@@ -27,13 +27,15 @@ type WireReactorStates =
   | typeof STATE_PAUSED_STALE
   | typeof STATE_OFF;
 
-type UnpackArrayWireSignalTypes<T> = { [P in keyof T]: T[P] extends WireSignal<infer U> ? U : never };
-type SubToken = <T, X extends Array<() => T>>(...args: X) => UnpackArrayWireSignalTypes<X>;
+type UnpackArraySignalTypes<T> = { [P in keyof T]: T[P] extends WireSignal<infer U> ? U : never };
+type SubToken = <T, X extends Array<() => T>>(...args: X) => UnpackArraySignalTypes<X>;
 
 type WireSignal<T> = {
   (): T;
   ($: SubToken): T;
-  (value: T): void;
+  // I'd like writes to return void but TS will resolve void before T in the
+  // parameter fn of wireReactor<T>
+  (value: T): T;
   /** Reactors subscribed to this signal */
   wR: Set<WireReactor>;
   /** Uncommitted value set during a transaction() block */
@@ -63,10 +65,10 @@ const STATE_PAUSED_STALE = 4;
 // In wireSignal and wireReactor `{ [id]() {} }[id]` preserves the function name
 // which is useful for debugging
 
-const wireReactor = (fn: ($: SubToken) => unknown): WireReactor => {
+const wireReactor = <T>(fn: ($: SubToken) => T): WireReactor<T> => {
   const id = `wR#${reactorId++}(${fn.name})`;
   // @ts-ignore rS,rP,inner,state are setup by reactorUnsubscribe() below
-  const wR: WireReactor = { [id]() {
+  const wR: WireReactor<T> = { [id]() {
     if (wR.state === STATE_RUNNING) {
       throw new Error(`Loop ${wR.name}`);
     }
@@ -120,6 +122,7 @@ const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; }
   type V = T[keyof T];
   Object.keys(obj).forEach(k => {
     let saved = obj[k];
+    let reactorForToken: WireReactor | undefined;
     // Batch the identifier since key k will be unique
     const id = `wS#${signalId}(${k})`;
     const wS = { [id](...args: (V | SubToken)[]) {
@@ -131,38 +134,36 @@ const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; }
           }
           activeReactor.rP.add(wS);
         }
-        return saved;
       }
       // Case: Read-Sub; could be any reactor not necessarily `reactorActive`
-      let reactorForToken: WireReactor | undefined;
       // eslint-disable-next-line no-cond-assign
-      if (reactorForToken = reactorTokenMap.get(args[0] as SubToken)) {
+      else if (reactorForToken = reactorTokenMap.get(args[0] as SubToken)) {
         if (reactorForToken.rP.has(wS)) {
           throw new Error(`Mixed rP/rS ${wS.name}`);
         }
         reactorForToken.rS.add(wS);
         wS.wR.add(reactorForToken);
-        return saved;
       }
-      // Case: Transaction (is V)
-      if (transactionSignals) {
+      // Case: Write but during a transaction (arg is V)
+      else if (transactionSignals) {
         transactionSignals.add(wS);
         wS.next = args[0] as V;
         // Don't write/save. Defer until the transaction commit
-        return;
       }
-      // Case: Write (is V)
-      saved = args[0] as V;
-      // Create a copy of wS's reactors since the Set can be added to during the
-      // call leading to an infinite loop. Also I need to order by depth which
-      // needs an array, but in Sinuous they can use a Set()
-      const toRun = [...wS.wR].sort((a, b) => a.depth - b.depth);
-      // Ordered by parent->child
-      toRun.forEach(wR => {
-        if (wR.state === STATE_PAUSED) wR.state = STATE_PAUSED_STALE;
-        else if (wR.state === STATE_ON) wR();
-      });
-      // Don't return the value on write, unlike Sinuous/S.js
+      else {
+      // Case: Write (arg is V)
+        saved = args[0] as V;
+        // Create a copy of wS's reactors since the Set can be added to during
+        // the call leading to an infinite loop. Also I need to order by depth
+        // which needs an array, but in Sinuous they can use a Set()
+        const toRun = [...wS.wR].sort((a, b) => a.depth - b.depth);
+        // Ordered by parent->child
+        toRun.forEach(wR => {
+          if (wR.state === STATE_PAUSED) wR.state = STATE_PAUSED_STALE;
+          else if (wR.state === STATE_ON) wR();
+        });
+      }
+      return saved;
     } }[id] as WireSignal<V>;
     wS.wR = new Set<WireReactor>();
     // @ts-ignore
