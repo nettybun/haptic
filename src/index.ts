@@ -30,7 +30,9 @@ api.patchTest = (expr) => {
   return typeof expr === 'function' && expr.name.startsWith('wR#');
 };
 
-// This can more easily be passed the element, attribute, endMark, etc.
+// XXX: Pass the element, attribute, endMark, etc? Sinuous does this. Also it
+// would mean red-dashing all reactors would work for attributes/properties
+// using an element popover
 api.patchHandler = (expr, updateCallback) => {
   const reactor = expr as WireReactor;
   const prevFn = reactor.fn;
@@ -38,7 +40,7 @@ api.patchHandler = (expr, updateCallback) => {
     // Extract the return value from the reactor.fn and update the DOM with it
     const value = prevFn($);
     updateCallback(value);
-
+    // TODO: Implement as a POC:
     // const span = document.createElement('span');
     // span.style.border = '2px dashed red';
     // span.textContent = String(value);
@@ -94,7 +96,7 @@ export { h, api, svg, when };
 declare namespace h {
   export namespace JSX {
     type MaybeReactor<T> = T | WireReactor<T>;
-    type AllowReactor<T> = { [K in keyof T]: MaybeReactor<T[K]> };
+    type AllowReactorForProperties<T> = { [K in keyof T]: MaybeReactor<T[K]> };
 
     type Element = HTMLElement | SVGElement | DocumentFragment;
 
@@ -106,11 +108,12 @@ declare namespace h {
 
     // Allow children on all DOM elements (not components, see above)
     // ESLint will error for children on void elements like <img/>
+    // XXX: Reactors aren't available for "onXYZ" event handlers
     type DOMAttributes<Target extends EventTarget>
-      = AllowReactor<GenericEventAttrs<Target>> & { children?: unknown };
+      = GenericEventAttrs<Target> & { children?: unknown };
 
     type HTMLAttributes<Target extends EventTarget>
-      = AllowReactor<Omit<HTMLAttrs, 'style'>>
+      = AllowReactorForProperties<Omit<HTMLAttrs, 'style'>>
         & { style?:
             | MaybeReactor<string>
             | { [key: string]: MaybeReactor<string | number> };
@@ -118,7 +121,7 @@ declare namespace h {
         & DOMAttributes<Target>;
 
     type SVGAttributes<Target extends EventTarget>
-      = AllowReactor<SVGAttrs> & HTMLAttributes<Target>;
+      = AllowReactorForProperties<SVGAttrs> & HTMLAttributes<Target>;
 
     type IntrinsicElements =
       & { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>; }

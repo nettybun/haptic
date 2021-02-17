@@ -19,10 +19,8 @@ const Page = () =>
     <input
       placeholder='Type something...'
       value={wR(data.text)}
-      // @ts-ignore TODO:
       onKeyUp={ev => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        data.text(ev.target.value);
+        data.text(ev.currentTarget.value);
       }}
       style='display:block'/>
     <button onClick={() => data.count(data.count() + 1)}>Inc</button>
