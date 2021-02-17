@@ -1,7 +1,7 @@
 import { h } from '../src';
-import { reactorRegistry, wireValues, wR } from '../src/v';
+import { reactorRegistry, wireSignals, wR } from '../src/w';
 
-const data = wireValues({
+const data = wireSignals({
   text: '',
   count: 0,
   registryContent: '',
@@ -39,17 +39,17 @@ const Page = () =>
           : `Text: "${text}" is ${text.length} chars`);
       })}
     </p>
-    <p>Functions that aren't reactions??? {() => <span>WHOA DAMN SERIALIZED!</span>}</p>
+    <p>Functions that aren't reactors? {() => <span>Function is serialized</span>}</p>
     <button onClick={() => {
       const reg: Record<string, unknown> = {};
       reactorRegistry.forEach(reactor => {
         reg[reactor.name] = {
           /* eslint-disable key-spacing */
-          fn   : reactor.fn.name,
-          wVsr : [...reactor.wVsr].map(x => x.name),
-          wVpr : [...reactor.wVpr].map(x => x.name),
-          wR   : [...reactor.wR].map(x => x.name),
-          runs : reactor.runs,
+          fn: reactor.fn.toString(),
+          signalSR: [...reactor.signalSR].map(x => x.name),
+          signalPR: [...reactor.signalPR].map(x => x.name),
+          inner: [...reactor.inner].map(x => x.name),
+          runs: reactor.runs,
           depth: reactor.depth,
           state: [
             'OFF',

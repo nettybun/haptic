@@ -16,9 +16,9 @@
 // some shared global state that is setup during import.
 
 import { h, api } from './h';
-import { wR, adopt, reactorPause } from './v';
+import { wR, adopt, reactorPause } from './w';
 
-import type { WireValue, WireReactor } from './v';
+import type { WireSignal, WireReactor } from './w';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
 type El = Element | Node | DocumentFragment;
@@ -44,6 +44,9 @@ api.patchHandler = (expr, updateCallback) => {
     // span.textContent = String(value);
     // updateCallback(span);
   };
+  reactor.fn.toString = () => {
+    return prevFn.name || prevFn.toString().replace(/\n\s+/g, ' ');
+  };
   // console.log('Call rx', rx.id);
   // Reactions are lazy so call that value now! (and to init subscriptions!)
   reactor();
@@ -60,29 +63,29 @@ const svg = <T extends () => Element>(closure: T): ReturnType<T> => {
 
 /** Utility: Switches content when the vocal in `condition` is updated */
 const when = <T extends string>(
-  condition: WireValue<T>,
+  condition: WireSignal<T>,
   views: { [k in T]?: Component }
 ): WireReactor => {
-  const renderedEl = {} as { [k in T]?: El };
-  const renderedRx = {} as { [k in T]?: WireReactor };
+  const renderedElements = {} as { [k in T]?: El };
+  const renderedReactors = {} as { [k in T]?: WireReactor };
   let condActive: T;
   return wR($ => {
     const cond = condition($);
     if (cond !== condActive && views[cond]) {
       // Tick. Pause reactors and keep DOM intact
-      reactorPause(renderedRx[condActive] as WireReactor);
+      reactorPause(renderedReactors[condActive] as WireReactor);
       condActive = cond;
       // Rendered?
-      if (renderedEl[cond]) {
+      if (renderedElements[cond]) {
         // Then unpause. If nothing has changed then no wVsr/wVpr links change
-        (renderedRx[cond] as WireReactor)();
+        (renderedReactors[cond] as WireReactor)();
       }
       // Able to render?
-      const parent = wR(() => {});
-      renderedEl[cond] = adopt(parent, () => h(views[cond] as Component));
-      renderedRx[cond] = parent;
+      const reactor = wR(() => {});
+      renderedElements[cond] = adopt(reactor, () => h(views[cond] as Component));
+      renderedReactors[cond] = reactor;
     }
-    return renderedEl[cond];
+    return renderedElements[cond];
   });
 };
 
@@ -90,8 +93,8 @@ export { h, api, svg, when };
 
 declare namespace h {
   export namespace JSX {
-    type MaybeVocal<T> = T | ((s: SubToken) => T);
-    type AllowVocal<Props> = { [K in keyof Props]: MaybeVocal<Props[K]> };
+    type MaybeReactor<T> = T | WireReactor<T>;
+    type AllowReactor<T> = { [K in keyof T]: MaybeReactor<T[K]> };
 
     type Element = HTMLElement | SVGElement | DocumentFragment;
 
@@ -104,18 +107,18 @@ declare namespace h {
     // Allow children on all DOM elements (not components, see above)
     // ESLint will error for children on void elements like <img/>
     type DOMAttributes<Target extends EventTarget>
-      = AllowVocal<GenericEventAttrs<Target>> & { children?: unknown };
+      = AllowReactor<GenericEventAttrs<Target>> & { children?: unknown };
 
     type HTMLAttributes<Target extends EventTarget>
-      = AllowVocal<Omit<HTMLAttrs, 'style'>>
+      = AllowReactor<Omit<HTMLAttrs, 'style'>>
         & { style?:
-            | MaybeVocal<string>
-            | { [key: string]: MaybeVocal<string | number> };
+            | MaybeReactor<string>
+            | { [key: string]: MaybeReactor<string | number> };
           }
         & DOMAttributes<Target>;
 
     type SVGAttributes<Target extends EventTarget>
-      = AllowVocal<SVGAttrs> & HTMLAttributes<Target>;
+      = AllowReactor<SVGAttrs> & HTMLAttributes<Target>;
 
     type IntrinsicElements =
       & { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>; }
