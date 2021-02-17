@@ -1,25 +1,7 @@
 import { api } from './index.js';
 
 type EventHandler = (ev: Event) => unknown;
-// Similar to $o for observable, this is an indicator that events are attached
 type NodeEvented = Node & { $l?: { [name: string]: EventHandler } };
-
-function eventProxy(this: NodeEvented, e: Event) {
-  // eslint-disable-next-line no-invalid-this
-  return this.$l && this.$l[e.type](e);
-}
-
-const handleEvent = (el: NodeEvented, name: string, value?: EventHandler) => {
-  name = name.slice(2).toLowerCase();
-  if (value) {
-    el.addEventListener(name, eventProxy);
-    (el.$l || (el.$l = {}))[name] = value;
-  } else {
-    el.removeEventListener(name, eventProxy);
-    // TODO: Equivalence?
-    (el.$l && delete el.$l.name);
-  }
-};
 
 /** Set attributes and propeties on a node */
 export const property = (el: Node, value: unknown, name: string | null, isAttr?: boolean, isCss?: boolean) => {
@@ -35,8 +17,17 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
     }
   }
   // Functions added as event handlers are not executed on render
+  // There's only one event listener per type
   else if (name[0] === 'o' && name[1] === 'n') {
-    handleEvent(el, name, value as EventHandler);
+    const listeners = (el as NodeEvented).$l || ((el as NodeEvented).$l = {});
+    name = name.slice(2).toLowerCase();
+    // Remove the previous function
+    if (listeners[name]) {
+      el.removeEventListener(name, listeners[name] as EventHandler); // TS bug
+      delete listeners[name];
+    }
+    el.addEventListener(name, value as EventHandler);
+    listeners[name] = value as EventHandler;
   }
   else if (api.patchTest(value)) {
     api.patchHandler(value, (v: unknown) => {
