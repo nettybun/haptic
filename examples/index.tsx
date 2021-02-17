@@ -46,8 +46,8 @@ const Page = () =>
         reg[reactor.name] = {
           /* eslint-disable key-spacing */
           fn: reactor.fn.toString(),
-          signalSR: [...reactor.signalSR].map(x => x.name),
-          signalPR: [...reactor.signalPR].map(x => x.name),
+          rS: [...reactor.rS].map(x => x.name),
+          rP: [...reactor.rP].map(x => x.name),
           inner: [...reactor.inner].map(x => x.name),
           runs: reactor.runs,
           depth: reactor.depth,

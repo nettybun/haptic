@@ -3,8 +3,8 @@ import esbuild from 'esbuild';
 const externalPlugin = {
   name: 'external',
   setup(build) {
-    build.onResolve({ filter: /\.\/(h|v)$/ }, args => {
-      // Resolve as 'h' or 'v'
+    build.onResolve({ filter: /\.\/(h|w)$/ }, args => {
+      // Resolve as 'h' or 'w'
       const lastChar = args.path[args.path.length - 1];
       return { path: `./${lastChar}`, external: true };
     });
@@ -25,8 +25,8 @@ Promise.all([
     ...shared,
   }),
   esbuild.build({
-    entryPoints: ['src/v/index.ts'],
-    outfile: 'publish/v/index.js',
+    entryPoints: ['src/w/index.ts'],
+    outfile: 'publish/w/index.js',
     ...shared,
   }),
   esbuild.build({
