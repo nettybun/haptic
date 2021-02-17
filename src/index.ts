@@ -2,7 +2,7 @@
 // access haptic/w on its own:
 
 // import { h } from 'haptic';
-// import { wireValues, wireReactor } from 'haptic/w';
+// import { wireSignals, wireReactor } from 'haptic/w';
 
 // The bundle includes 2 utilities, svg() and when(), and extends the JSX
 // namespace to allow using WireReactors. Use haptic/h directly to use a vanilla
@@ -33,26 +33,31 @@ api.patchTest = (expr) => {
 // XXX: Pass the element, attribute, endMark, etc? Sinuous does this. Also it
 // would mean red-dashing all reactors would work for attributes/properties
 // using an element popover
+
 api.patchHandler = (expr, updateCallback) => {
-  const reactor = expr as WireReactor;
-  const prevFn = reactor.fn;
-  reactor.fn = $ => {
-    // Extract the return value from the reactor.fn and update the DOM with it
-    const value = prevFn($);
-    updateCallback(value);
-    // TODO: Implement as a POC:
-    // const span = document.createElement('span');
-    // span.style.border = '2px dashed red';
-    // span.textContent = String(value);
-    // updateCallback(span);
-  };
-  reactor.fn.toString = () => {
-    return prevFn.name || prevFn.toString().replace(/\n\s+/g, ' ');
-  };
-  // console.log('Call rx', rx.id);
-  // Reactions are lazy so call that value now! (and to init subscriptions!)
-  reactor();
+  const prevFn = (expr as WireReactor).fn;
+  (expr as WireReactor).fn = $ => updateCallback(prevFn($));
+  (expr as WireReactor)();
 };
+
+// api.patchHandler = (expr, updateCallback) => {
+//   const reactor = expr as WireReactor;
+//   const prevFn = reactor.fn;
+//   // Extract the return value from the reactor.fn and update the DOM with it
+//   reactor.fn = $ => {
+//     const value = prevFn($);
+//     updateCallback(value);
+//     // TODO: Implement as a POC:
+//     // const span = document.createElement('span');
+//     // span.style.border = '2px dashed red';
+//     // span.textContent = String(value);
+//     // updateCallback(span);
+//   };
+//   reactor.fn.toString = () => {
+//     return prevFn.name || prevFn.toString().replace(/\n\s+/g, ' ');
+//   };
+//   reactor();
+// };
 
 /** Utility: Renders SVGs by setting h() to the SVG namespace */
 const svg = <T extends () => Element>(closure: T): ReturnType<T> => {
