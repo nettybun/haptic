@@ -13,9 +13,9 @@ over-engineering causes never ending development and specifically hurts new
 developers who are trying to learn.
 
 There's minimum hidden complexity in Haptic. It's ~500 lines of source code; 220
-of which is the single-file reactivity engine haptic/w. You wire reactivity into
-a page by explicitly subscribing signals and reactors yourself. This reactivity
-is also debuggable at runtime with proper naming and lookups.
+of which is the single-file reactivity engine called haptic/w. Reactivity is
+wired into a page explicitly by subscribing signals and reactors. This is then
+debuggable at runtime with proper naming and lookups.
 
 Its first goal is to setup non-developers (i.e partners/friends) on the path to
 building basic web apps they can understand.
