@@ -10,14 +10,13 @@ type O = { [k: string]: unknown };
 type WireReactor<T = void> = {
   (): T;
   fn: ($: SubToken) => unknown;
-  /** Sub-read values from last run */
-  wVsr: Set<WireValue<X>>;
-  /** Pass-read values from last run */
-  wVpr: Set<WireValue<X>>;
-  /** Inner/children reactors */
-  wR: Set<WireReactor>;
-  depth: number;
+  /** Signal sub-reads from last run */
+  signalSR: Set<WireSignal<X>>;
+  /** Signal pass-reads from last run */
+  signalPR: Set<WireSignal<X>>;
+  inner: Set<WireReactor>;
   runs: number;
+  depth: number;
   state: WireReactorStates;
 };
 
@@ -28,26 +27,26 @@ type WireReactorStates =
   | typeof STATE_PAUSED_STALE
   | typeof STATE_OFF;
 
-type UnpackArrayWireValueTypes<T> = { [P in keyof T]: T[P] extends WireValue<infer U> ? U : never };
-type SubToken = <T, X extends Array<() => T>>(...args: X) => UnpackArrayWireValueTypes<X>;
+type UnpackArrayWireSignalTypes<T> = { [P in keyof T]: T[P] extends WireSignal<infer U> ? U : never };
+type SubToken = <T, X extends Array<() => T>>(...args: X) => UnpackArrayWireSignalTypes<X>;
 
-type WireValue<T> = {
+type WireSignal<T> = {
   (): T;
   ($: SubToken): T;
   (value: T): void;
-  /** Reactors subscribed to this value */
-  wR: Set<WireReactor>;
+  /** Reactors subscribed to this signal */
+  reactors: Set<WireReactor>;
   /** Uncommitted value set during a transaction() block */
   next?: T;
 };
 
-let wValueId = 0;
-let wReactorId = 0;
+let signalId = 0;
+let reactorId = 0;
 
 // Currently running reactor
-let reactorActive: WireReactor | undefined;
-// WireValues written to during a transaction(() => {...})
-let transactionBatch: Set<WireValue<X>> | undefined;
+let activeReactor: WireReactor | undefined;
+// WireSignals written to during a transaction(() => {...})
+let transactionSignals: Set<WireSignal<X>> | undefined;
 
 // Registry is a Set, not WeakSet, because it should be iterable
 const reactorRegistry = new Set<WireReactor>();
@@ -61,11 +60,11 @@ const STATE_RUNNING      = 2;
 const STATE_PAUSED       = 3;
 const STATE_PAUSED_STALE = 4;
 
-// In wireValue and wireReactor `{ [id]() {} }[id]` preserves the function name
+// In wireSignal and wireReactor `{ [id]() {} }[id]` preserves the function name
 // which is useful for debugging
 
 const wireReactor = (fn: ($: SubToken) => unknown): WireReactor => {
-  const id = `wR#${wReactorId++}(${fn.name})`;
+  const id = `wR#${reactorId++}(${fn.name})`;
   // @ts-ignore sr,pr,inner,state are setup by reactorUnsubscribe() below
   const wR: WireReactor = { [id]() {
     if (wR.state === STATE_RUNNING) {
@@ -74,28 +73,28 @@ const wireReactor = (fn: ($: SubToken) => unknown): WireReactor => {
     // If STATE_PAUSED then STATE_PAUSED_STALE was never reached; nothing has
     // changed. Restore state (below) and call inner reactors so they can check
     if (wR.state === STATE_PAUSED) {
-      wR.wR.forEach(reactor => reactor());
+      wR.inner.forEach(reactor => reactor());
     } else {
-      // Symmetrically remove all connections from wV/wR. Called "automatic
+      // Symmetrically remove all connections from wS/wR. Called "automatic
       // memory management" in Sinuous/S.js
       reactorUnsubscribe(wR);
       wR.state = STATE_RUNNING;
       // @ts-ignore It's not happy with this but the typing is correct
-      const $: SubToken = ((...wV) => wV.map(sT => sT($)));
+      const $: SubToken = ((...wS) => wS.map(signal => signal($)));
       // Token is set but never deleted since it's a WeakMap
       reactorTokenMap.set($, wR);
       adopt(wR, () => wR.fn($));
       wR.runs++;
     }
-    wR.state = wR.wVsr.size
+    wR.state = wR.signalSR.size
       ? STATE_ON
       : STATE_OFF;
   } }[id];
   wR.fn = fn;
   wR.runs = 0;
-  wR.depth = reactorActive ? reactorActive.depth + 1 : 0;
+  wR.depth = activeReactor ? activeReactor.depth + 1 : 0;
   reactorRegistry.add(wR);
-  if (reactorActive) reactorActive.wR.add(wR);
+  if (activeReactor) activeReactor.inner.add(wR);
   reactorUnsubscribe(wR);
   return wR;
 };
@@ -104,78 +103,78 @@ const reactorUnsubscribe = (wR: WireReactor): void => {
   wR.state = STATE_OFF;
   // Skip newly created reactors since inner/sr aren't yet defined
   if (wR.runs) {
-    wR.wR.forEach(reactorUnsubscribe);
-    wR.wVsr.forEach(sT => sT.wR.delete(wR));
+    wR.inner.forEach(reactorUnsubscribe);
+    wR.signalSR.forEach(sT => sT.reactors.delete(wR));
   }
-  wR.wVsr = new Set();
-  wR.wVpr = new Set();
-  wR.wR = new Set();
+  wR.signalSR = new Set();
+  wR.signalPR = new Set();
+  wR.inner = new Set();
 };
 
 const reactorPause = (wR: WireReactor) => {
   wR.state = STATE_PAUSED;
-  wR.wR.forEach(reactorPause);
+  wR.inner.forEach(reactorPause);
 };
 
-const wireValues = <T extends O>(obj: T): { [K in keyof T]: WireValue<T[K]>; } => {
+const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; } => {
   type V = T[keyof T];
   Object.keys(obj).forEach(k => {
     let saved = obj[k];
     // Batch the identifier since key k will be unique
-    const id = `wV#${wValueId}(${k})`;
-    const wV = { [id](...args: (V | SubToken)[]) {
+    const id = `wS#${signalId}(${k})`;
+    const wS = { [id](...args: (V | SubToken)[]) {
       // Case: Pass-Read
       if (!args.length) {
-        if (reactorActive) {
-          if (reactorActive.wVsr.has(wV)) {
-            throw new Error(`Mixed sr/pr ${wV.name}`);
+        if (activeReactor) {
+          if (activeReactor.signalSR.has(wS)) {
+            throw new Error(`Mixed sr/pr ${wS.name}`);
           }
-          reactorActive.wVpr.add(wV);
+          activeReactor.signalPR.add(wS);
         }
         return saved;
       }
       // Case: Sub-Read; could be any reactor not necessarily `reactorActive`
-      let reactorFound: WireReactor | undefined;
+      let reactorForToken: WireReactor | undefined;
       // eslint-disable-next-line no-cond-assign
-      if (reactorFound = reactorTokenMap.get(args[0] as SubToken)) {
-        if (reactorFound.wVpr.has(wV)) {
-          throw new Error(`Mixed pr/sr ${wV.name}`);
+      if (reactorForToken = reactorTokenMap.get(args[0] as SubToken)) {
+        if (reactorForToken.signalPR.has(wS)) {
+          throw new Error(`Mixed pr/sr ${wS.name}`);
         }
-        reactorFound.wVsr.add(wV);
-        wV.wR.add(reactorFound);
+        reactorForToken.signalSR.add(wS);
+        wS.reactors.add(reactorForToken);
         return saved;
       }
       // Case: Transaction (is V)
-      if (transactionBatch) {
-        transactionBatch.add(wV);
-        wV.next = args[0] as V;
+      if (transactionSignals) {
+        transactionSignals.add(wS);
+        wS.next = args[0] as V;
         // Don't write/save. Defer until the transaction commit
         return;
       }
       // Case: Write (is V)
       saved = args[0] as V;
-      // Create a copy of wV's reactors since the Set can be added to during the
+      // Create a copy of wS's reactors since the Set can be added to during the
       // call leading to an infinite loop. Also I need to order by depth which
       // needs an array, but in Sinuous they can use a Set()
-      const toRun = [...wV.wR].sort((a, b) => a.depth - b.depth);
+      const toRun = [...wS.reactors].sort((a, b) => a.depth - b.depth);
       // Ordered by parent->child
       toRun.forEach(wR => {
         if (wR.state === STATE_PAUSED) wR.state = STATE_PAUSED_STALE;
         else if (wR.state === STATE_ON) wR();
       });
       // Don't return the value on write, unlike Sinuous/S.js
-    } }[id] as WireValue<V>;
-    wV.wR = new Set<WireReactor>();
+    } }[id] as WireSignal<V>;
+    wS.reactors = new Set<WireReactor>();
     // @ts-ignore
-    obj[k] = wV;
+    obj[k] = wS;
   });
-  wValueId++;
-  return obj as { [K in keyof T]: WireValue<T[K]>; };
+  signalId++;
+  return obj as { [K in keyof T]: WireSignal<T[K]>; };
 };
 
 const transaction = <T>(fn: () => T): T => {
-  const prev = transactionBatch;
-  transactionBatch = new Set();
+  const prev = transactionSignals;
+  transactionSignals = new Set();
   let error: unknown;
   let ret: unknown;
   try {
@@ -183,19 +182,19 @@ const transaction = <T>(fn: () => T): T => {
   } catch (err) {
     error = err;
   }
-  const values = transactionBatch;
-  transactionBatch = prev;
+  const signals = transactionSignals;
+  transactionSignals = prev;
   if (error) throw error;
-  values.forEach(wV => {
-    wV(wV.next);
-    delete wV.next;
+  signals.forEach(wS => {
+    wS(wS.next);
+    delete wS.next;
   });
   return ret as T;
 };
 
-const adopt = <T>(reactorParent: WireReactor, fn: () => T): T => {
-  const prev = reactorActive;
-  reactorActive = reactorParent;
+const adopt = <T>(parentReactor: WireReactor, fn: () => T): T => {
+  const prev = activeReactor;
+  activeReactor = parentReactor;
   let error: unknown;
   let ret: unknown;
   try {
@@ -203,14 +202,14 @@ const adopt = <T>(reactorParent: WireReactor, fn: () => T): T => {
   } catch (err) {
     error = err;
   }
-  reactorActive = prev;
+  activeReactor = prev;
   if (error) throw error;
   return ret as T;
 };
 
 export {
-  wireValues,
-  wireValues as wV,
+  wireSignals,
+  wireSignals as wS,
   wireReactor,
   wireReactor as wR,
   reactorRegistry,
@@ -219,4 +218,4 @@ export {
   transaction,
   adopt
 };
-export type { WireValue, WireReactor, WireReactorStates, SubToken };
+export type { WireSignal, WireReactor, WireReactorStates, SubToken };
