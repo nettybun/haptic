@@ -14,7 +14,6 @@ const localDef = wR($ => {
 
 const Page = () =>
   <main>
-    {/* I think this is ok. Haptic will monkey-patch the fn to extract its return value */}
     <p>This has been clicked {wR(data.count)} times</p>
     <input
       placeholder='Type something...'

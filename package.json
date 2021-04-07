@@ -17,11 +17,11 @@
     "size:bundle": "echo $(esbuild --bundle src/index.ts --format=esm --minify | gzip -9 | wc -c) min+gzip bytes"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^4.15.1",
-    "@typescript-eslint/parser": "^4.15.1",
-    "esbuild": "^0.8.46",
-    "eslint": "^7.20.0",
-    "eslint-plugin-react": "^7.22.0",
-    "typescript": "^4.1.5"
+    "@typescript-eslint/eslint-plugin": "^4.21.0",
+    "@typescript-eslint/parser": "^4.21.0",
+    "esbuild": "^0.11.6",
+    "eslint": "^7.23.0",
+    "eslint-plugin-react": "^7.23.1",
+    "typescript": "^4.2.4"
   }
 }
