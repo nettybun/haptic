@@ -1,2 +1,0 @@
-import{h as c,api as s}from"./h";import{rx as T,adopt as p}from"./v";s.rxTest=n=>typeof n=="function"&&n.name.startsWith("rx");s.rxHandler=(n,r)=>{let e=n,o=e.fn;e.fn=l=>{let a=o(l);r(a)},e()};var m=n=>{let r=s.ns;s.ns="http://www.w3.org/2000/svg";let e=n();return s.ns=r,e},u=(n,r)=>{let e={},o={},l;return a=>{let t=n(a);if(t!==l&&r[t]){o[l].pause(),l=t,e[t]&&o[t]();let i=T(()=>{});e[t]=p(i,()=>c(r[t])),o[t]=i}return e[t]}};export{s as api,c as h,m as svg,u as when};
-//# sourceMappingURL=index.js.map
