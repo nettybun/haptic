@@ -9,7 +9,8 @@
     "noUncheckedIndexedAccess": true,
     "outDir": "publish",
     "jsx": "preserve",
-    "jsxFactory": "h"
+    "jsxFactory": "h",
+    "importsNotUsedAsValues": "error",
   },
   "exclude": [
     "node_modules",
