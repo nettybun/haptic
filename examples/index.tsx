@@ -14,6 +14,7 @@ const data = wireSignals({
   count: 0,
 });
 
+// TODO: insert.patch(el, value) and property.patch(el, prop, value)
 api.patchHandler = regDebugPatchHandler;
 regDebugTrackSignalSubscriptions(Object.values(data) as WireSignal[]);
 

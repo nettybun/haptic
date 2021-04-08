@@ -24,6 +24,8 @@ import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements 
 type El = Element | Node | DocumentFragment;
 type Component = (...args: unknown[]) => El;
 
+// TODO: insert.patch(el, value) and property.patch(el, prop, value)
+
 api.patchTest = (expr) => {
   // Perflink benchmark says using reactorRegistry's Set.has() would be ~20%
   // slower than Function#name's String.startsWith()

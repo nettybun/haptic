@@ -16,18 +16,20 @@ function regDebugRender(mountNode: Node) {
   queueRedraw();
 }
 
+// TODO: insert.patch(el, value) and property.patch(el, prop, value)
 const regDebugPatchHandler: typeof api.patchHandler = (expr, updateCallback) => {
   const reactor = expr as WireReactor;
   const prevFn = reactor.fn;
   // Extract the return value from the reactor.fn and update the DOM with it
   reactor.fn = ($) => {
     const value = prevFn($);
-    updateCallback(value);
-    // TODO: Implement as a POC: See above TODO...
-    // const span = document.createElement('span');
-    // span.style.border = '2px dashed red';
-    // span.textContent = String(value);
-    // updateCallback(span);
+    // updateCallback(value);
+
+    // TODO: This needs to not change layout at all (absolute positioning?)
+    const span = document.createElement('span');
+    span.style.border = '2px dashed red';
+    span.textContent = String(value);
+    updateCallback(span);
   };
   reactor.fn.toString = () => {
     return prevFn.name || prevFn.toString().replace(/\n\s+/g, ' ');

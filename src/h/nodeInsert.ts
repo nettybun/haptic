@@ -69,4 +69,6 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
   return current;
 };
 
+// TODO: insert.patch(el, value) and property.patch(el, prop, value)
+
 export { insert };
