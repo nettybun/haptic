@@ -12,8 +12,6 @@ import {
 const data = wireSignals({
   text: '',
   count: 0,
-  // Oh lol you do this; infinite loop...moved to regDebug.ts
-  // registrySerializations: 0,
 });
 
 api.patchHandler = regDebugPatchHandler;
@@ -52,8 +50,8 @@ const Page = () =>
     <p>{externallyDefinedReactorTest}</p>
   </main>;
 
+document.body.appendChild(<Page/>);
+
 const regEl = <pre/>;
 regDebugRender(regEl);
-
-document.body.appendChild(<Page/>);
 document.body.appendChild(regEl);
