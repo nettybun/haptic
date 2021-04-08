@@ -1,15 +1,27 @@
-import { h } from '../src';
-import { reactorRegistry, wireSignals, wR } from '../src/w';
+import { h, api } from '../src/index.js';
+import { wireSignals, wR } from '../src/w/index.js';
+
+import type { WireSignal } from '../src/w/index.js';
+
+import {
+  regDebugRender,
+  regDebugPatchHandler,
+  regDebugTrackSignalSubscriptions
+} from './registryDebugging.js';
 
 const data = wireSignals({
   text: '',
   count: 0,
-  registryContent: '',
+  // Oh lol you do this; infinite loop...moved to regDebug.ts
+  // registrySerializations: 0,
 });
 
-const localDef = wR($ => {
-  const content = data.registryContent($);
-  return `The registry content is ${content.length} long now at ${new Date().toLocaleTimeString()}`;
+api.patchHandler = regDebugPatchHandler;
+regDebugTrackSignalSubscriptions(Object.values(data) as WireSignal[]);
+
+const externallyDefinedReactorTest = wR($ => {
+  return `data.text chars: ${data.text($).length}; `
+    + `data.count chars: ${String(data.count($)).length}`;
 });
 
 const Page = () =>
@@ -18,7 +30,7 @@ const Page = () =>
     <input
       placeholder='Type something...'
       value={wR(data.text)}
-      onKeyUp={ev => {
+      onInput={ev => {
         data.text(ev.currentTarget.value);
       }}
       style='display:block'/>
@@ -37,34 +49,11 @@ const Page = () =>
       })}
     </p>
     <p>Functions that aren't reactors? {() => <span>Function is serialized</span>}</p>
-    <button onClick={() => {
-      const reg: Record<string, unknown> = {};
-      reactorRegistry.forEach(reactor => {
-        reg[reactor.name] = {
-          /* eslint-disable key-spacing */
-          fn: reactor.fn.toString(),
-          rS: [...reactor.rS].map(x => x.name),
-          rP: [...reactor.rP].map(x => x.name),
-          inner: [...reactor.inner].map(x => x.name),
-          runs: reactor.runs,
-          depth: reactor.depth,
-          state: [
-            'OFF',
-            'ON',
-            'RUNNING',
-            'PAUSED',
-            'PAUSED_STALE',
-          ][reactor.state],
-        };
-      });
-      console.log(reg);
-      data.registryContent(JSON.stringify(reg, null, 4));
-    }}>
-      Load rx registry
-    </button>
-    <p>{localDef}</p>
-    <pre>{wR(data.registryContent)}</pre>
+    <p>{externallyDefinedReactorTest}</p>
   </main>;
 
-document.body.innerHTML = '';
+const regEl = <pre/>;
+regDebugRender(regEl);
+
 document.body.appendChild(<Page/>);
+document.body.appendChild(regEl);
