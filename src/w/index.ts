@@ -10,9 +10,9 @@ type O = { [k: string]: unknown };
 type WireReactor<T = void> = {
   (): T;
   fn: ($: SubToken) => unknown;
-  /** Read-sub signals from last run */
+  /** Read-Sub signals from last run */
   rS: Set<WireSignal<X>>;
-  /** Read-pass signals from last run */
+  /** Read-Pass signals from last run */
   rP: Set<WireSignal<X>>;
   inner: Set<WireReactor>;
   runs: number;
@@ -30,7 +30,7 @@ type WireReactorStates =
 type UnpackArraySignalTypes<T> = { [P in keyof T]: T[P] extends WireSignal<infer U> ? U : never };
 type SubToken = <T, X extends Array<() => T>>(...args: X) => UnpackArraySignalTypes<X>;
 
-type WireSignal<T> = {
+type WireSignal<T = unknown> = {
   (): T;
   ($: SubToken): T;
   // I'd like writes to return void but TS will resolve void before T in the
