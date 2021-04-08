@@ -72,6 +72,10 @@
     }
   },
   "rules": {
+    "arrow-parens": [
+      "error",
+      "always"
+    ],
     "block-spacing": "error",
     "comma-dangle": [
       "error",

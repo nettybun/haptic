@@ -20,7 +20,7 @@ const regDebugPatchHandler: typeof api.patchHandler = (expr, updateCallback) => 
   const reactor = expr as WireReactor;
   const prevFn = reactor.fn;
   // Extract the return value from the reactor.fn and update the DOM with it
-  reactor.fn = $ => {
+  reactor.fn = ($) => {
     const value = prevFn($);
     updateCallback(value);
     // TODO: Implement as a POC: See above TODO...
@@ -60,13 +60,13 @@ function snapshotRegistry() {
   const snapshot: Record<string, unknown> = {
     SNAPSHOT_ID: snapshotId,
   };
-  reactorRegistry.forEach(reactor => {
+  reactorRegistry.forEach((reactor) => {
     snapshot[reactor.name] = {
       /* eslint-disable key-spacing */
       fn: reactor.fn.toString(),
-      rS: [...reactor.rS].map(x => x.name),
-      rP: [...reactor.rP].map(x => x.name),
-      inner: [...reactor.inner].map(x => x.name),
+      rS: [...reactor.rS].map((x) => x.name),
+      rP: [...reactor.rP].map((x) => x.name),
+      inner: [...reactor.inner].map((x) => x.name),
       runs: reactor.runs,
       depth: reactor.depth,
       state: [

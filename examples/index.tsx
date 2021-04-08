@@ -17,7 +17,7 @@ const data = wireSignals({
 api.patchHandler = regDebugPatchHandler;
 regDebugTrackSignalSubscriptions(Object.values(data) as WireSignal[]);
 
-const externallyDefinedReactorTest = wR($ => {
+const externallyDefinedReactorTest = wR(($) => {
   return `data.text chars: ${data.text($).length}; `
     + `data.count chars: ${String(data.count($)).length}`;
 });
@@ -28,18 +28,18 @@ const Page = () =>
     <input
       placeholder='Type something...'
       value={wR(data.text)}
-      onInput={ev => {
+      onInput={(ev) => {
         data.text(ev.currentTarget.value);
       }}
       style='display:block'/>
     <button onClick={() => data.count(data.count() + 1)}>Inc</button>
     <p>Here's math:
-      {wR($ => data.count($) < 5
+      {wR(($) => data.count($) < 5
         ? Math.PI * data.count($)
         : `Text: "${data.text($)}" is ${data.text($).length} chars`)}
     </p>
     <p>Here's math again as $(v, v):
-      {wR($ => {
+      {wR(($) => {
         const [count, text] = $(data.count, data.text);
         return (count < 5
           ? Math.PI * count

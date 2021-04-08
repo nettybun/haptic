@@ -13,10 +13,10 @@ esbuild
     bundle: true,
     write: false,
   })
-  .then(sr => {
+  .then((sr) => {
     console.log(`Listening on http://${sr.host}:${sr.port}`);
   })
-  .catch(err => {
+  .catch((err) => {
     console.error(err);
     process.exit(1);
   });

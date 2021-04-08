@@ -32,7 +32,7 @@ api.patchTest = (expr) => {
 
 api.patchHandler = (expr, updateCallback) => {
   const prevFn = (expr as WireReactor).fn;
-  (expr as WireReactor).fn = $ => updateCallback(prevFn($));
+  (expr as WireReactor).fn = ($) => updateCallback(prevFn($));
   (expr as WireReactor)();
 };
 
@@ -53,7 +53,7 @@ const when = <T extends string>(
   const renderedElements = {} as { [k in T]?: El };
   const renderedReactors = {} as { [k in T]?: WireReactor };
   let condActive: T;
-  return wR($ => {
+  return wR(($) => {
     const cond = condition($);
     if (cond !== condActive && views[cond]) {
       // Tick. Pause reactors and keep DOM intact

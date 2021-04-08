@@ -75,14 +75,14 @@ const wireReactor = <T>(fn: ($: SubToken) => T): WireReactor<T> => {
     // If STATE_PAUSED then STATE_PAUSED_STALE was never reached; nothing has
     // changed. Restore state (below) and call inner reactors so they can check
     if (wR.state === STATE_PAUSED) {
-      wR.inner.forEach(reactor => reactor());
+      wR.inner.forEach((reactor) => reactor());
     } else {
       // Symmetrically remove all connections from wS/wR. Called "automatic
       // memory management" in Sinuous/S.js
       reactorUnsubscribe(wR);
       wR.state = STATE_RUNNING;
       // @ts-ignore It's not happy with this but the typing is correct
-      const $: SubToken = ((...wS) => wS.map(signal => signal($)));
+      const $: SubToken = ((...wS) => wS.map((signal) => signal($)));
       // Token is set but never deleted since it's a WeakMap
       reactorTokenMap.set($, wR);
       adopt(wR, () => wR.fn($));
@@ -106,7 +106,7 @@ const reactorUnsubscribe = (wR: WireReactor): void => {
   // Skip newly created reactors since inner/rS/rP aren't yet defined
   if (wR.runs) {
     wR.inner.forEach(reactorUnsubscribe);
-    wR.rS.forEach(signal => signal.wR.delete(wR));
+    wR.rS.forEach((signal) => signal.wR.delete(wR));
   }
   wR.rS = new Set();
   wR.rP = new Set();
@@ -120,7 +120,7 @@ const reactorPause = (wR: WireReactor) => {
 
 const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; } => {
   type V = T[keyof T];
-  Object.keys(obj).forEach(k => {
+  Object.keys(obj).forEach((k) => {
     let saved = obj[k];
     let reactorForToken: WireReactor | undefined;
     // Batch the identifier since key k will be unique
@@ -158,7 +158,7 @@ const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; }
         // which needs an array, but in Sinuous they can use a Set()
         const toRun = [...wS.wR].sort((a, b) => a.depth - b.depth);
         // Ordered by parent->child
-        toRun.forEach(wR => {
+        toRun.forEach((wR) => {
           if (wR.state === STATE_PAUSED) wR.state = STATE_PAUSED_STALE;
           else if (wR.state === STATE_ON) wR();
         });
@@ -186,7 +186,7 @@ const transaction = <T>(fn: () => T): T => {
   const signals = transactionSignals;
   transactionSignals = prev;
   if (error) throw error;
-  signals.forEach(wS => {
+  signals.forEach((wS) => {
     wS(wS.next);
     delete wS.next;
   });

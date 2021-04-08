@@ -27,7 +27,7 @@ function h(tag: Tag, ...args: unknown[]): El | undefined {
   else {
     el = tag;
   }
-  args.forEach(arg => {
+  args.forEach((arg) => {
     // @ts-expect-error Empty if
     // eslint-disable-next-line eqeqeq
     if (arg == null);
