@@ -63,7 +63,7 @@ const when = <T extends string>(
       condActive = cond;
       // Rendered?
       if (renderedElements[cond]) {
-        // Then unpause. If nothing has changed then no wVsr/wVpr links change
+        // Then unpause. If nothing has changed then no wR.rS/wR.rP links change
         (renderedReactors[cond] as WireReactor)();
       }
       // Able to render?
