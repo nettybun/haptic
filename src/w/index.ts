@@ -122,7 +122,9 @@ const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; }
   type V = T[keyof T];
   Object.keys(obj).forEach((k) => {
     let saved = obj[k];
-    let reactorForToken: WireReactor | undefined;
+    // Used for reactorTokenMap but also as a temporary variable in case Write-A
+    let subReactor: WireReactor | undefined;
+    let computedSignalReactor: WireReactor | undefined;
     // Batch the identifier since key k will be unique
     const id = `wS#${signalId}(${k})`;
     const wS = { [id](...args: (V | SubToken)[]) {
@@ -137,12 +139,12 @@ const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; }
       }
       // Case: Read-Sub; could be any reactor not necessarily `reactorActive`
       // eslint-disable-next-line no-cond-assign
-      else if (reactorForToken = reactorTokenMap.get(args[0] as SubToken)) {
-        if (reactorForToken.rP.has(wS)) {
+      else if (subReactor = reactorTokenMap.get(args[0] as SubToken)) {
+        if (subReactor.rP.has(wS)) {
           throw new Error(`Mixed rP/rS ${wS.name}`);
         }
-        reactorForToken.rS.add(wS);
-        wS.wR.add(reactorForToken);
+        subReactor.rS.add(wS);
+        wS.wR.add(subReactor);
       }
       // Case: Write but during a transaction (arg is V)
       else if (transactionSignals) {
@@ -150,19 +152,51 @@ const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; }
         wS.next = args[0] as V;
         // Don't write/save. Defer until the transaction commit
       }
-      else {
       // Case: Write (arg is V)
-        saved = args[0] as V;
-        // Create a copy of wS's reactors since the Set can be added to during
-        // the call leading to an infinite loop. Also I need to order by depth
-        // which needs an array, but in Sinuous they can use a Set()
-        const toRun = [...wS.wR].sort((a, b) => a.depth - b.depth);
-        // Ordered by parent->child
-        toRun.forEach((wR) => {
-          if (wR.state === STATE_PAUSED) wR.state = STATE_PAUSED_STALE;
-          else if (wR.state === STATE_ON) wR();
-        });
+      else {
+        // Case: Write-A: Signal to Computed-Signal
+        if (typeof args[0] === 'function') {
+          // Dependencies of the computed-signal are registered to this new
+          // reactor via $. The return value of V($) is passed back into this wS
+          // closure (wS is NOT the global export here) which hits the Write-B
+          // branch, saving and calling our own dependencies.
+          console.log('Initializing computed-signal reactor');
+          subReactor = wireReactor(($) => {
+            console.log('Inside computed-signal reactor. $ is', $);
+            // @ts-ignore
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            const val = args[0]($);
+            console.log('Inside computed-signal reactor. Val is', val);
+            wS(val);
+          });
+          console.log('Calling computed-signal reactor');
+          subReactor();
+          console.log('Saved computed-signal reactor. Hopefully it updates');
+          computedSignalReactor = subReactor;
+        }
+        // Case: Write-B: Signal dispatch
+        else {
+          // Runs when converting Computed-Signal to Signal or when Write-A
+          // calls subReactor() and is about to overwrite the current computed
+          // reactor. Either way, unsubscribe the previous reactor.
+          if (computedSignalReactor) {
+            console.log('Clearing previous computed-signal reactor');
+            reactorUnsubscribe(computedSignalReactor);
+          }
+          saved = args[0] as V;
+          console.log('Dispatching signal write:', saved);
+          // Create a copy of wS's reactors since the Set can be added to during
+          // the call leading to an infinite loop. Also I need to order by depth
+          // which needs an array, but in Sinuous they can use a Set().
+          const toRun = [...wS.wR].sort((a, b) => a.depth - b.depth);
+          // Ordered by parent->child
+          toRun.forEach((wR) => {
+            if (wR.state === STATE_PAUSED) wR.state = STATE_PAUSED_STALE;
+            else if (wR.state === STATE_ON) wR();
+          });
+        }
       }
+      // TODO: Need to actually call the computed-signal...Not only on write
       return saved;
     } }[id] as WireSignal<V>;
     wS.wR = new Set<WireReactor>();

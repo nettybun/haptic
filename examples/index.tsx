@@ -1,7 +1,7 @@
 import { h, api } from '../src/index.js';
 import { wireSignals, wR } from '../src/w/index.js';
 
-import type { WireSignal } from '../src/w/index.js';
+import type { WireSignal, SubToken } from '../src/w/index.js';
 
 import {
   regDebugRender,
@@ -12,7 +12,12 @@ import {
 const data = wireSignals({
   text: '',
   count: 0,
+  // OHNO! $ might be undefined, and then data.count will write undefined...
+  countSquared: ($: SubToken) => data.count($) ** 2,
 });
+
+// @ts-ignore
+window.data = data;
 
 // TODO: insert.patch(el, value) and property.patch(el, prop, value)
 api.patchHandler = regDebugPatchHandler;
@@ -26,6 +31,10 @@ const externallyDefinedReactorTest = wR(($) => {
 const Page = () =>
   <main>
     <p>This has been clicked {wR(data.count)} times</p>
+    <p>Squared, that's {data.countSquared()}</p>
+    {/* This currently, incorrectly, returns the function rather than calling it
+    until you pass it back into itself because it's wired to understand writes
+    only, not the initial creation */}
     <input
       placeholder='Type something...'
       value={wR(data.text)}
