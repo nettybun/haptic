@@ -121,12 +121,12 @@ const reactorPause = (wR: WireReactor) => {
 const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; } => {
   type V = T[keyof T];
   Object.keys(obj).forEach((k) => {
-    let saved = obj[k];
+    let saved: V;
     // Used for reactorTokenMap but also as a temporary variable in case Write-A
     let subReactor: WireReactor | undefined;
     let computedSignalReactor: WireReactor | undefined;
     // Batch the identifier since key k will be unique
-    const id = `wS#${signalId}(${k})`;
+    const id = `wS#${signalId++}(${k})`;
     const wS = { [id](...args: (V | SubToken)[]) {
       // Case: Read-Pass
       if (!args.length) {
@@ -196,14 +196,14 @@ const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; }
           });
         }
       }
-      // TODO: Need to actually call the computed-signal...Not only on write
       return saved;
     } }[id] as WireSignal<V>;
     wS.wR = new Set<WireReactor>();
-    // @ts-ignore
+    // Run. This triggers functions and computeds
+    wS(obj[k] as V);
+    // @ts-ignore Mutate object type in place, sorry not sorry
     obj[k] = wS;
   });
-  signalId++;
   return obj as { [K in keyof T]: WireSignal<T[K]>; };
 };
 
