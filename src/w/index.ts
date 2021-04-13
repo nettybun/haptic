@@ -69,12 +69,12 @@ const reactorTokenMap = new WeakMap<SubToken, WireReactor<X>>();
 
 // Symbol() doesn't gzip well. `[] as const` gzips best but isn't debuggable
 // without a lookup Map<> and other hacks.
-const STATE_OFF          = 0;
-const STATE_ON           = 1;
-const STATE_RUNNING      = 2;
-const STATE_PAUSED       = 3;
-// TODO: Replace with multi purpose STATE_STALE for computeds
-const STATE_PAUSED_STALE = 4;
+const STATE_OFF     = 0;
+const STATE_ON      = 1;
+const STATE_RUNNING = 2;
+const STATE_PAUSED  = 3;
+// Reactor runs are skipped if they're paused or they're for a computed signal
+const STATE_STALE   = 4;
 
 // In wireSignal and wireReactor `{ [id]() {} }[id]` preserves the function name
 // which is useful for debugging
@@ -101,9 +101,6 @@ const wireReactor = <T>(fn: ($: SubToken) => T): WireReactor<T> => {
       // Token is set but never deleted since it's a WeakMap
       reactorTokenMap.set($, wR);
       saved = adopt(wR, () => wR.fn($));
-      if (wR.cSignal) {
-        wR.cStale = false;
-      }
       wR.runs++;
     }
     wR.state = wR.rS.size
@@ -182,31 +179,32 @@ const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; }
         }
         saved = args[0] as V;
         if (saved && (saved as { $wR?: 1 }).$wR) {
-          (saved as WireReactor<V>).cSignal = wS;
+          (saved as WireReactor<V>).cS = wS;
         }
         // Create a copy of wS's reactors since the Set can be added to during
         // the call leading to an infinite loop. Also I need to order by depth
-        // which needs an array, but in Sinuous they can use a Set().
+        // which needs an array, but in Sinuous they can use a Set()
         const toRun = [...wS.wR].sort((a, b) => a.depth - b.depth);
-        // Mark upstream computeds as stale
-        toRun.forEach((wR) => wR.cSignal && (wR.cStale = true));
-        // Calls are ordered parent->child. Don't call computeds
+        // Mark upstream computeds as stale. Must be in a different for loop
         toRun.forEach((wR) => {
-          if (wR.state === STATE_PAUSED) wR.state = STATE_PAUSED_STALE;
-          else if (wR.state === STATE_ON && !wR.cSignal) wR();
+          if (wR.state === STATE_PAUSED || wR.cS) wR.state = STATE_STALE;
+        });
+        // Calls are ordered parent->child. Skip calling computed signals
+        toRun.forEach((wR) => {
+          if (wR.state === STATE_ON && !wR.cS) wR();
         });
       }
       if (saved && (saved as { $wR?: 1 }).$wR) {
-        if ((saved as WireReactor<V>).cStale) {
-          savedComputed = (saved as WireReactor<V>)();
+        if ((saved as WireReactor<V>).state === STATE_STALE) {
+          savedForComputed = (saved as WireReactor<V>)();
         }
-        return savedComputed;
+        return savedForComputed;
       }
       return saved;
     } }[id] as WireSignal<V>;
     wS.$wS = 1;
     wS.wR = new Set<WireReactor<X>>();
-    // Call so "Case: Write" de|initializes computeds
+    // Call so "Case: Write" de|initializes computed signals
     wS(obj[k] as V);
     // @ts-ignore Mutate object type in place, sorry not sorry
     obj[k] = wS;
