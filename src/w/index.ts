@@ -8,43 +8,52 @@ type O = { [k: string]: unknown };
 // Reactors don't use their function's return value, but it's useful to monkey
 // patch them after creation. Haptic does this for h()
 type WireReactor<T = unknown> = {
+  /** Start/Run */
   (): T;
+  /** User-provided function to run */
   fn: ($: SubToken) => T;
   /** Read-Sub signals from last run */
   rS: Set<WireSignal<X>>;
   /** Read-Pass signals from last run */
   rP: Set<WireSignal<X>>;
+  /** Other reactors created during this (parent) run */
   inner: Set<WireReactor<X>>;
-  runs: number;
+  /** How many parents this reactor has; see wR.inner */
   depth: number;
+  /** Run count */
+  runs: number;
+  /** FSM state: ON|OFF|RUNNING|PAUSED|STALE */
   state: WireReactorStates;
-  cSignal?: WireSignal<T>;
-  cStale?: boolean;
-  $wR: 1; // It's very common to want to know if a function is a reactor
+  /** The computed signal, only exists if part of one */
+  cS?: WireSignal<T>;
+  /** To check "if x is a reactor" */
+  $wR: 1;
+};
+
+type WireSignal<T = unknown> = {
+  /** Read value */
+  (): T;
+  /** Read value & subscribe */
+  ($: SubToken): T;
+  /** Write value; notifying reactors  */
+  (value: T): T;
+  /** Subscribed reactors */
+  wR: Set<WireReactor<X>>;
+  /** Pending value set during a transaction() */
+  next?: T;
+  /** To check "if x is a signal" */
+  $wS: 1;
 };
 
 type WireReactorStates =
+  | typeof STATE_OFF
   | typeof STATE_ON
   | typeof STATE_RUNNING
   | typeof STATE_PAUSED
-  | typeof STATE_PAUSED_STALE
-  | typeof STATE_OFF;
+  | typeof STATE_STALE;
 
 type UnpackArraySignalTypes<T> = { [P in keyof T]: T[P] extends WireSignal<infer U> ? U : never };
 type SubToken = <T, X extends Array<() => T>>(...args: X) => UnpackArraySignalTypes<X>;
-
-type WireSignal<T = unknown> = {
-  (): T;
-  ($: SubToken): T;
-  // I'd like writes to return void but TS will resolve void before T in the
-  // parameter fn of wireReactor<T>
-  (value: T): T;
-  /** Reactors subscribed to this signal */
-  wR: Set<WireReactor<X>>;
-  /** Uncommitted value set during a transaction() block */
-  next?: T;
-  $wS: 1; // Less common that $wR, but here for consistency
-};
 
 let signalId = 0;
 let reactorId = 0;
