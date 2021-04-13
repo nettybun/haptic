@@ -63,8 +63,7 @@ let activeReactor: WireReactor<X> | undefined;
 // WireSignals written to during a transaction(() => {...})
 let transactionSignals: Set<WireSignal<X>> | undefined;
 
-// Registry is a Set, not WeakSet, because it should be iterable
-const reactorRegistry = new Set<WireReactor<X>>();
+// Lookup $ to find which reactor it refers to
 const reactorTokenMap = new WeakMap<SubToken, WireReactor<X>>();
 
 // Symbol() doesn't gzip well. `[] as const` gzips best but isn't debuggable
@@ -112,7 +111,6 @@ const wireReactor = <T>(fn: ($: SubToken) => T): WireReactor<T> => {
   wR.fn = fn;
   wR.runs = 0;
   wR.depth = activeReactor ? activeReactor.depth + 1 : 0;
-  reactorRegistry.add(wR);
   if (activeReactor) activeReactor.inner.add(wR);
   reactorUnsubscribe(wR);
   return wR;
@@ -251,7 +249,6 @@ export {
   wireSignals as wS,
   wireReactor,
   wireReactor as wR,
-  reactorRegistry,
   reactorUnsubscribe,
   reactorPause,
   transaction,
