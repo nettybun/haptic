@@ -1,26 +1,30 @@
 import { h, api } from '../src/index.js';
 import { wireSignals, wR } from '../src/w/index.js';
 
-import type { WireSignal, SubToken } from '../src/w/index.js';
-
 import {
   regDebugRender,
   regDebugPatchHandler,
   regDebugTrackSignalSubscriptions
 } from './registryDebugging.js';
 
-const data = wireSignals({
+const s1 = wireSignals({
   text: '',
   count: 0,
-  countSquared: wR(($) => data.count($) ** 2),
 });
+const c1 = wireSignals({
+  countSquared: wR(($) => s1.count($) ** 2),
+});
+const c2 = wireSignals({
+  countSquaredSquared: wR(($) => c1.countSquared($) ** 2),
+});
+const data = { ...s1, ...c1, ...c2 };
 
 // @ts-ignore
 window.data = data;
 
 // TODO: insert.patch(el, value) and property.patch(el, prop, value)
 api.patchHandler = regDebugPatchHandler;
-regDebugTrackSignalSubscriptions(Object.values(data) as WireSignal[]);
+regDebugTrackSignalSubscriptions(Object.values(data));
 
 const externallyDefinedReactorTest = wR(($) => {
   return `data.text chars: ${data.text($).length}; `

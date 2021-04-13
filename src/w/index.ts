@@ -52,8 +52,8 @@ type WireReactorStates =
   | typeof STATE_PAUSED
   | typeof STATE_STALE;
 
-type UnpackArraySignalTypes<T> = { [P in keyof T]: T[P] extends WireSignal<infer U> ? U : never };
-type SubToken = <T, X extends Array<() => T>>(...args: X) => UnpackArraySignalTypes<X>;
+type UnpackArraySignals<T> = { [P in keyof T]: T[P] extends WireSignal<infer U> ? U : never };
+type SubToken = <T, X extends Array<() => T>>(...args: X) => UnpackArraySignals<X>;
 
 let signalId = 0;
 let reactorId = 0;
@@ -133,7 +133,15 @@ const reactorPause = (wR: WireReactor<X>) => {
   wR.inner.forEach(reactorPause);
 };
 
-const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; } => {
+// type UnpackReactorFnReturn<T> = T extends ($: SubToken) => infer R ? R : T;
+// const wireSignals = <T extends { [k: string]: (($: SubToken) => unknown) | unknown }>(obj: T): {
+//   [K in keyof T]: WireSignal<UnpackReactorFnReturn<T[K]>>;
+// } => {
+// type WithWildcards<T> = T & { [key: string]: unknown };
+// type UnpackReactorFnReturn<T> = T extends ($: SubToken) => infer R ? R : T;
+const wireSignals = <T extends O>(obj: T): {
+  [K in keyof T]: WireSignal<T[K] extends WireReactor<infer R> ? R : T[K]>;
+} => {
   type V = T[keyof T];
   Object.keys(obj).forEach((k) => {
     let saved: V;
@@ -203,10 +211,11 @@ const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; }
     wS.wR = new Set<WireReactor<X>>();
     // Call so "Case: Write" de|initializes computed signals
     wS(obj[k] as V);
-    // @ts-ignore Mutate object type in place, sorry not sorry
+    // @ts-ignore
     obj[k] = wS;
   });
-  return obj as { [K in keyof T]: WireSignal<T[K]>; };
+  // @ts-ignore
+  return obj;
 };
 
 const transaction = <T>(fn: () => T): T => {
