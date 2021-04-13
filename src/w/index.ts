@@ -139,9 +139,8 @@ const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; }
   type V = T[keyof T];
   Object.keys(obj).forEach((k) => {
     let saved: V;
-    let savedComputed: V;
-    let reactorFromToken: WireReactor<X> | undefined;
-    // Batch the identifier since key k will be unique
+    let savedForComputed: V | undefined;
+    let reactorForToken: WireReactor<X> | undefined;
     const id = `wS#${signalId++}(${k})`;
     const wS = { [id](...args: (V | SubToken)[]) {
       // Case: Read-Pass
@@ -155,12 +154,12 @@ const wireSignals = <T extends O>(obj: T): { [K in keyof T]: WireSignal<T[K]>; }
       }
       // Case: Read-Sub; could be any reactor not necessarily `reactorActive`
       // eslint-disable-next-line no-cond-assign
-      else if (reactorFromToken = reactorTokenMap.get(args[0] as SubToken)) {
-        if (reactorFromToken.rP.has(wS)) {
+      else if (reactorForToken = reactorTokenMap.get(args[0] as SubToken)) {
+        if (reactorForToken.rP.has(wS)) {
           throw new Error(`Mixed rP/rS ${wS.name}`);
         }
-        reactorFromToken.rS.add(wS);
-        wS.wR.add(reactorFromToken);
+        reactorForToken.rS.add(wS);
+        wS.wR.add(reactorForToken);
       }
       // Case: Write but during a transaction (arg is V)
       else if (transactionSignals) {
