@@ -12,8 +12,7 @@ import {
 const data = wireSignals({
   text: '',
   count: 0,
-  // OHNO! $ might be undefined, and then data.count will write undefined...
-  countSquared: ($: SubToken) => data.count($) ** 2,
+  countSquared: wR(($) => data.count($) ** 2),
 });
 
 // @ts-ignore
