@@ -139,8 +139,11 @@ const reactorPause = (wR: WireReactor<X>) => {
 // } => {
 // type WithWildcards<T> = T & { [key: string]: unknown };
 // type UnpackReactorFnReturn<T> = T extends ($: SubToken) => infer R ? R : T;
-const wireSignals = <T extends O>(obj: T): {
-  [K in keyof T]: WireSignal<T[K] extends WireReactor<infer R> ? R : T[K]>;
+// type MaybeSubFn<Val> = Val extends (...args: X[]) => infer R ? ($: SubToken) => R : number;
+const wireSignals = <T extends {
+  [K in keyof T]: (($: SubToken) => X) | T[K]
+}>(obj: T): {
+  [K in keyof T]: WireSignal<T[K] extends ($: SubToken) => infer R ? R : T[K]>;
 } => {
   type V = T[keyof T];
   Object.keys(obj).forEach((k) => {
