@@ -3,7 +3,6 @@
 /* eslint-disable no-multi-spaces */
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 type X = any;
-type O = { [k: string]: unknown };
 
 // Reactors don't use their function's return value, but it's useful to monkey
 // patch them after creation. Haptic does this for h()
@@ -145,10 +144,10 @@ const wireSignals = <T extends {
 }>(obj: T): {
   [K in keyof T]: WireSignal<T[K] extends ($: SubToken) => infer R ? R : T[K]>;
 } => {
-  type V = T[keyof T];
+  type V = T[keyof T] | undefined;
   Object.keys(obj).forEach((k) => {
     let saved: V;
-    let savedForComputed: V | undefined;
+    let savedForComputed: V;
     let reactorForToken: WireReactor<X> | undefined;
     const id = `wS#${signalId++}(${k})`;
     const wS = { [id](...args: (V | SubToken)[]) {
@@ -183,11 +182,11 @@ const wireSignals = <T extends {
         // reactor. Either way, unsubscribe the previous reactor.
         if (saved && (saved as { $wR?: 1 }).$wR) {
           console.log('Clearing previous computed-signal reactor');
-          reactorUnsubscribe(saved as WireReactor<V>);
+          reactorUnsubscribe(saved as unknown as WireReactor<V>);
         }
         saved = args[0] as V;
         if (saved && (saved as { $wR?: 1 }).$wR) {
-          (saved as WireReactor<V>).cS = wS;
+          (saved as unknown as WireReactor<V>).cS = wS;
         }
         // Create a copy of wS's reactors since the Set can be added to during
         // the call leading to an infinite loop. Also I need to order by depth
@@ -203,8 +202,8 @@ const wireSignals = <T extends {
         });
       }
       if (saved && (saved as { $wR?: 1 }).$wR) {
-        if ((saved as WireReactor<V>).state === STATE_STALE) {
-          savedForComputed = (saved as WireReactor<V>)();
+        if ((saved as unknown as WireReactor<V>).state === STATE_STALE) {
+          savedForComputed = (saved as unknown as WireReactor<V>)();
         }
         return savedForComputed;
       }
@@ -213,7 +212,7 @@ const wireSignals = <T extends {
     wS.$wS = 1;
     wS.wR = new Set<WireReactor<X>>();
     // Call so "Case: Write" de|initializes computed signals
-    wS(obj[k] as V);
+    wS(obj[k as keyof T] as V);
     // @ts-ignore
     obj[k] = wS;
   });
