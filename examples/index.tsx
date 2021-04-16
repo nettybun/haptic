@@ -1,31 +1,45 @@
 import { h, api } from '../src/index.js';
-import { wireSignals, wR } from '../src/w/index.js';
+import { wS, wR } from '../src/w/index.js';
 import type { WireReactor, WireSignal, SubToken } from '../src/w/index.js';
 
-import {
-  regDebugRender,
-  regDebugPatchHandler,
-  regDebugTrackSignalSubscriptions
-} from './registryDebugging.js';
+// import {
+//   regDebugRender,
+//   regDebugPatchHandler,
+//   regDebugTrackSignalSubscriptions
+// } from './registryDebugging.js';
 
-// I actually filed a bug TypeScript #43683
-const data = wireSignals({
+// TypeScript #43683 helped me figure this out
+const data = wS({
   text: '',
   count: 0,
-  countPlusOne($): number {
-    return data.count($) + 1;
-  },
-  countPlusTwo($): number {
-    return data.countPlusOne($) + 1;
-  },
+  // TODO:
+  // - `name: () => X` works but will need ($: SubToken) manually defined
+
+  // - `($): number => X` works but needs X type manually defined. This also
+  //    isn't great for being transparent and honest. All I see in wS is X is a
+  //    function. What if they accidentally passed a function not knowing about
+  //    computed signals at all. It's best to be explicit. `$name: () => wR`
+  //    would be most explicit and less accidental? TS can use tag template
+  //    types to detect $ but what about error handling then? I still have to
+  //    call the function though, which isn't great... That could have side
+  //    effects and what if I call it to unpack the wR and it's not a wR. ohno.
+
+  // - `wR($ => X)` directly needs X type manually defined. However, it's
+  //    easiest to check in wS, it's most explicit, zero accidents, and $ is
+  //    typed because wR... Writing the return type isn't super fun but it will
+  //    error if its wrong so it's not as bad as "as T" like I originally
+  //    thought; it's type safe.
+
+  countPlusOne: wR(($): number => data.count($) + 1),
+  countPlusTwo: wR(($): number => data.countPlusOne($) + 1),
 });
 
 // @ts-ignore
-window.data = data;
+Object.assign(window, { data, wR, wS, api });
 
 // TODO: insert.patch(el, value) and property.patch(el, prop, value)
-api.patchHandler = regDebugPatchHandler;
-regDebugTrackSignalSubscriptions(Object.values(data) as WireSignal[]);
+// api.patchHandler = regDebugPatchHandler;
+// regDebugTrackSignalSubscriptions(Object.values(data) as WireSignal[]);
 
 const externallyDefinedReactorTest = wR(($) => {
   return `data.text chars: ${data.text($).length}; `
@@ -35,10 +49,7 @@ const externallyDefinedReactorTest = wR(($) => {
 const Page = () =>
   <main>
     <p>This has been clicked {wR(data.count)} times</p>
-    <p>Squared, that's {data.countPlusOne()}</p>
-    {/* This currently, incorrectly, returns the function rather than calling it
-    until you pass it back into itself because it's wired to understand writes
-    only, not the initial creation */}
+    <p>Initial countPlusOne (never updated): {data.countPlusOne()}</p>
     <input
       placeholder='Type something...'
       value={wR(data.text)}
@@ -66,6 +77,6 @@ const Page = () =>
 
 document.body.appendChild(<Page/>);
 
-const regEl = <pre/>;
-regDebugRender(regEl);
-document.body.appendChild(regEl);
+// const regEl = <pre/>;
+// regDebugRender(regEl);
+// document.body.appendChild(regEl);
