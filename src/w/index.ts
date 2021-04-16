@@ -4,8 +4,6 @@
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 type X = any;
 
-// Reactors don't use their function's return value, but it's useful to monkey
-// patch them after creation. Haptic does this for h()
 type WireReactor<T = unknown> = {
   /** Start/Run */
   (): T;
@@ -132,25 +130,15 @@ const reactorPause = (wR: WireReactor<X>) => {
   wR.inner.forEach(reactorPause);
 };
 
-// type UnpackReactorFnReturn<T> = T extends ($: SubToken) => infer R ? R : T;
-// const wireSignals = <T extends { [k: string]: (($: SubToken) => unknown) | unknown }>(obj: T): {
-//   [K in keyof T]: WireSignal<UnpackReactorFnReturn<T[K]>>;
-// } => {
-// type WithWildcards<T> = T & { [key: string]: unknown };
-// type UnpackReactorFnReturn<T> = T extends ($: SubToken) => infer R ? R : T;
-// type MaybeSubFn<Val> = Val extends (...args: X[]) => infer R ? ($: SubToken) => R : number;
-const wireSignals = <T extends {
-  [K in keyof T]: (($: SubToken) => X) | T[K]
-}>(obj: T): {
-  [K in keyof T]: WireSignal<T[K] extends ($: SubToken) => infer R ? R : T[K]>;
+const wireSignals = <T>(obj: T): {
+  [K in keyof T]: WireSignal<T[K] extends WireReactor<infer R> ? R : T[K]>;
 } => {
-  type V = T[keyof T] | undefined;
   Object.keys(obj).forEach((k) => {
-    let saved: V;
-    let savedForComputed: V;
+    let savedData: unknown;
+    let savedComputedData: unknown;
     let reactorForToken: WireReactor<X> | undefined;
     const id = `wS#${signalId++}(${k})`;
-    const wS = { [id](...args: (V | SubToken)[]) {
+    const wS = { [id](...args: (SubToken | unknown)[]) {
       // Case: Read-Pass
       if (!args.length) {
         if (activeReactor) {
@@ -172,7 +160,7 @@ const wireSignals = <T extends {
       // Case: Write but during a transaction (arg is V)
       else if (transactionSignals) {
         transactionSignals.add(wS);
-        wS.next = args[0] as V;
+        wS.next = args[0] as T[keyof T];
         // Don't write/save. Defer until the transaction commit
       }
       // Case: Write (arg is V)
@@ -180,13 +168,15 @@ const wireSignals = <T extends {
         // Runs when converting Computed-Signal to Signal or when Write-A
         // calls subReactor() and is about to overwrite the current computed
         // reactor. Either way, unsubscribe the previous reactor.
-        if (saved && (saved as { $wR?: 1 }).$wR) {
-          console.log('Clearing previous computed-signal reactor');
-          reactorUnsubscribe(saved as unknown as WireReactor<V>);
+        if (savedData && (savedData as { $wR?: 1 }).$wR) {
+          console.log('Clearing cS wR for', wS, savedData);
+          reactorUnsubscribe(savedData as WireReactor);
         }
-        saved = args[0] as V;
-        if (saved && (saved as { $wR?: 1 }).$wR) {
-          (saved as unknown as WireReactor<V>).cS = wS;
+        savedData = args[0] as T[keyof T];
+        if (savedData && (savedData as { $wR?: 1 }).$wR) {
+          console.log('Registering cS wR for', wS, savedData);
+          (savedData as WireReactor).state = STATE_STALE;
+          (savedData as WireReactor).cS = wS;
         }
         // Create a copy of wS's reactors since the Set can be added to during
         // the call leading to an infinite loop. Also I need to order by depth
@@ -201,22 +191,24 @@ const wireSignals = <T extends {
           if (wR.state === STATE_ON && !wR.cS) wR();
         });
       }
-      if (saved && (saved as { $wR?: 1 }).$wR) {
-        if ((saved as unknown as WireReactor<V>).state === STATE_STALE) {
-          savedForComputed = (saved as unknown as WireReactor<V>)();
+      // TODO: I actually can't do a read on a write... it breaks computeds
+      if (savedData && (savedData as { $wR?: 1 }).$wR) {
+        if ((savedData as WireReactor).state === STATE_STALE) {
+          console.log('Running cS wR', wS, savedData);
+          savedComputedData = (savedData as WireReactor)();
         }
-        return savedForComputed;
+        return savedComputedData;
       }
-      return saved;
-    } }[id] as WireSignal<V>;
+      return savedData;
+    } }[id] as WireSignal;
     wS.$wS = 1;
     wS.wR = new Set<WireReactor<X>>();
-    // Call so "Case: Write" de|initializes computed signals
-    wS(obj[k as keyof T] as V);
-    // @ts-ignore
+    // Call wS to run the "Case: Write" which de|initializes computed signals
+    wS(obj[k as keyof T]);
+    // @ts-ignore Mutation of T
     obj[k] = wS;
   });
-  // @ts-ignore
+  // @ts-ignore Mutation of T
   return obj;
 };
 
