@@ -1,8 +1,10 @@
 // Haptic Wire
 
-/* eslint-disable no-multi-spaces */
+/* eslint-disable prefer-const,no-multi-spaces,@typescript-eslint/no-non-null-assertion */
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 type X = any;
+
+// TODO: Do a size compare for "delete X.n" vs "X.n=0" and typing with "T|0"
 
 type WireReactor<T = unknown> = {
   /** Start/Run */
@@ -21,8 +23,8 @@ type WireReactor<T = unknown> = {
   runs: number;
   /** FSM state: ON|OFF|RUNNING|PAUSED|STALE */
   state: WireReactorStates;
-  /** The computed signal, only exists if part of one */
-  cS?: WireSignal<T>;
+  /** If part of a computed signal, this is its signal */
+  csWS?: WireSignal<T>;
   /** To check "if x is a reactor" */
   $wR: 1;
 };
@@ -30,14 +32,16 @@ type WireReactor<T = unknown> = {
 type WireSignal<T = unknown> = {
   /** Read value */
   (): T;
+  /** Write value; notifying reactors */ // Ordered before ($):T for TS to work
+  (value: T): void;
   /** Read value & subscribe */
   ($: SubToken): T;
-  /** Write value; notifying reactors  */
-  (value: T): T;
   /** Subscribed reactors */
   wR: Set<WireReactor<X>>;
   /** Pending value set during a transaction() */
   next?: T;
+  /** If this is a computed-signal, this is its reactor */
+  csWR?: WireReactor<T>;
   /** To check "if x is a signal" */
   $wS: 1;
 };
@@ -116,9 +120,11 @@ const wireReactor = <T>(fn: ($: SubToken) => T): WireReactor<T> => {
 const reactorUnsubscribe = (wR: WireReactor<X>): void => {
   wR.state = STATE_OFF;
   // Skip newly created reactors since inner/rS/rP aren't yet defined
+  // TODO: Write a test for `runs` to check unexpected runs
   if (wR.runs) {
     wR.inner.forEach(reactorUnsubscribe);
     wR.rS.forEach((signal) => signal.wR.delete(wR));
+    // TODO: wR.passedSubs.forEach s => s.wR.delete(wR)
   }
   wR.rS = new Set();
   wR.rP = new Set();
@@ -133,22 +139,25 @@ const reactorPause = (wR: WireReactor<X>) => {
 const wireSignals = <T>(obj: T): {
   [K in keyof T]: WireSignal<T[K] extends WireReactor<infer R> ? R : T[K]>;
 } => {
+  // TODO: Size test inside or outside the loop
+  let reactorForToken: WireReactor<X> | undefined;
   Object.keys(obj).forEach((k) => {
-    let savedData: unknown;
-    let savedComputedData: unknown;
-    let reactorForToken: WireReactor<X> | undefined;
+    let saved: unknown;
     const id = `wS#${signalId++}(${k})`;
     const wS = { [id](...args: (SubToken | unknown)[]) {
       // Case: Read-Pass
       if (!args.length) {
         if (activeReactor) {
-          if (activeReactor.rS.has(wS)) {
+          // Skip the error if the reactor is for a computed signal...
+          // TODO: Wait. No. Because then inconsistent rS rP? s,s,p is valid :(
+          // Need a separate list... (see next TODO)
+          if (activeReactor.rS.has(wS) && !activeReactor.csWS) {
             throw new Error(`Mixed rS/rP ${wS.name}`);
           }
           activeReactor.rP.add(wS);
         }
       }
-      // Case: Read-Sub; could be any reactor not necessarily `reactorActive`
+      // Case: Read-Sub; could be any reactor not necessarily `activeReactor`
       // eslint-disable-next-line no-cond-assign
       else if (reactorForToken = reactorTokenMap.get(args[0] as SubToken)) {
         if (reactorForToken.rP.has(wS)) {
@@ -156,50 +165,59 @@ const wireSignals = <T>(obj: T): {
         }
         reactorForToken.rS.add(wS);
         wS.wR.add(reactorForToken);
+        // Subscribing to a computed-signal also links cR's signals (skip rP/rS)
+        if (wS.csWR) {
+          wS.csWR.rS.forEach((s) => {
+            // TODO: Don't link to rS. That's weird. This is for unsubscribing
+            // only. Need a separate list... Like wR.passedSubs.add(s);
+            reactorForToken!.rS.add(s);
+            s.wR.add(reactorForToken!);
+          });
+        }
       }
-      // Case: Write but during a transaction (arg is V)
+      // Case: Write during a transaction; defer saving the value
+      // TODO: Size? Could use `else if (write = false, transactionSignals)`
       else if (transactionSignals) {
         transactionSignals.add(wS);
         wS.next = args[0] as T[keyof T];
-        // Don't write/save. Defer until the transaction commit
+        return;
       }
-      // Case: Write (arg is V)
+      // Case: Write
       else {
-        // Runs when converting Computed-Signal to Signal or when Write-A
-        // calls subReactor() and is about to overwrite the current computed
-        // reactor. Either way, unsubscribe the previous reactor.
-        if (savedData && (savedData as { $wR?: 1 }).$wR) {
-          console.log('Clearing cS wR for', wS, savedData);
-          reactorUnsubscribe(savedData as WireReactor);
+        // If overwriting a computed-signal, unsubscribe the reactor
+        if (wS.csWR) {
+          console.log('Clearing cR/cS for', wS);
+          reactorUnsubscribe(wS.csWR);
+          delete wS.csWR.csWS; // Part of unsubscribing/cleaning the reactor
+          delete wS.csWR;
         }
-        savedData = args[0] as T[keyof T];
-        if (savedData && (savedData as { $wR?: 1 }).$wR) {
-          console.log('Registering cS wR for', wS, savedData);
-          (savedData as WireReactor).state = STATE_STALE;
-          (savedData as WireReactor).cS = wS;
+        saved = args[0] as T[keyof T];
+        // If writing a reactor, register as a computed-signal
+        if (saved && (saved as { $wR?: 1 }).$wR) {
+          console.log('Registering cR/cS', wS);
+          // TODO: Possibly smaller size via hack (wS.csWR = saved).csWS = wS
+          wS.csWR = saved as WireReactor;
+          wS.csWR.csWS = wS;
+          wS.csWR.state = STATE_STALE;
         }
-        // Create a copy of wS's reactors since the Set can be added to during
-        // the call leading to an infinite loop. Also I need to order by depth
-        // which needs an array, but in Sinuous they can use a Set()
+        // Notify. Copy wS.wR since the Set() can grow while running and loop
+        // infinitely. Depth ordering needs an array while Sinuous uses a Set()
         const toRun = [...wS.wR].sort((a, b) => a.depth - b.depth);
-        // Mark upstream computeds as stale. Must be in a different for loop
+        // Mark upstream computeds as stale. Must be in an isolated for-loop
         toRun.forEach((wR) => {
-          if (wR.state === STATE_PAUSED || wR.cS) wR.state = STATE_STALE;
+          if (wR.state === STATE_PAUSED || wR.csWS) wR.state = STATE_STALE;
         });
-        // Calls are ordered parent->child. Skip calling computed signals
+        // Calls are ordered parent->child. Skip computed-signals; they're lazy
         toRun.forEach((wR) => {
-          if (wR.state === STATE_ON && !wR.cS) wR();
+          if (wR.state === STATE_ON && !wR.csWS) wR();
         });
+        return;
       }
-      // TODO: I actually can't do a read on a write... it breaks computeds
-      if (savedData && (savedData as { $wR?: 1 }).$wR) {
-        if ((savedData as WireReactor).state === STATE_STALE) {
-          console.log('Running cS wR', wS, savedData);
-          savedComputedData = (savedData as WireReactor)();
-        }
-        return savedComputedData;
+      if (wS.csWR && wS.csWR.state === STATE_STALE) {
+        console.log('Running cR', wS);
+        saved = wS.csWR();
       }
-      return savedData;
+      return saved;
     } }[id] as WireSignal;
     wS.$wS = 1;
     wS.wR = new Set<WireReactor<X>>();
