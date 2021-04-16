@@ -69,12 +69,12 @@ const reactorTokenMap = new WeakMap<SubToken, WireReactor<X>>();
 
 // Symbol() doesn't gzip well. `[] as const` gzips best but isn't debuggable
 // without a lookup Map<> and other hacks.
-const STATE_OFF     = 0;
-const STATE_ON      = 1;
-const STATE_RUNNING = 2;
-const STATE_PAUSED  = 3;
+declare const STATE_OFF     = 0;
+declare const STATE_ON      = 1;
+declare const STATE_RUNNING = 2;
+declare const STATE_PAUSED  = 3;
 // Reactor runs are skipped if they're paused or they're for a computed signal
-const STATE_STALE   = 4;
+declare const STATE_STALE   = 4;
 
 // In wireSignal and wireReactor `{ [id]() {} }[id]` preserves the function name
 // which is useful for debugging
