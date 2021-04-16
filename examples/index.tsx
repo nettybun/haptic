@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import { h, api } from '../src/index.js';
 import { wS, wR } from '../src/w/index.js';
 import type { WireReactor, WireSignal, SubToken } from '../src/w/index.js';

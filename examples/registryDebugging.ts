@@ -40,7 +40,7 @@ const regDebugPatchHandler: typeof api.patchHandler = (expr, updateCallback) => 
 const regDebugTrackSignalSubscriptions = (signals: WireSignal[]) => {
   signals.forEach((signal) => {
     console.log(`Tracking ${signal.name}`);
-    const set = signal.wR;
+    const set = signal.rS;
     // Intercept the prototype functions...
     const addFn = set.add.bind(set);
     set.add = function(wR) {
@@ -66,8 +66,9 @@ function snapshotRegistry() {
     snapshot[reactor.name] = {
       /* eslint-disable key-spacing */
       fn: reactor.fn.toString(),
-      rS: [...reactor.rS].map((x) => x.name),
-      rP: [...reactor.rP].map((x) => x.name),
+      sRS: [...reactor.sRS].map((x) => x.name),
+      sRP: [...reactor.sRP].map((x) => x.name),
+      sXS: [...reactor.sXS].map((x) => x.name),
       inner: [...reactor.inner].map((x) => x.name),
       runs: reactor.runs,
       depth: reactor.depth,
@@ -76,7 +77,7 @@ function snapshotRegistry() {
         'ON',
         'RUNNING',
         'PAUSED',
-        'PAUSED_STALE',
+        'STALE',
       ][reactor.state],
     };
   });
