@@ -26,11 +26,7 @@ type Component = (...args: unknown[]) => El;
 
 // TODO: insert.patch(el, value) and property.patch(el, prop, value)
 
-api.patchTest = (expr) => {
-  // Perflink benchmark says using reactorRegistry's Set.has() would be ~20%
-  // slower than Function#name's String.startsWith()
-  return typeof expr === 'function' && expr.name.startsWith('wR#');
-};
+api.patchTest = (expr) => (expr && (expr as { $wR: 1 }).$wR) as boolean;
 
 api.patchHandler = (expr, updateCallback) => {
   const prevFn = (expr as WireReactor).fn;
