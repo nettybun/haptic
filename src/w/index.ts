@@ -80,7 +80,7 @@ declare const STATE_STALE   = 4;
 // which is useful for debugging
 
 const wireReactor = <T>(fn: ($: SubToken) => T): WireReactor<T> => {
-  const id = `wR#${reactorId++}(${fn.name})`;
+  const id = `wR:${reactorId++}{${fn.name}}`;
   let saved: T;
   // @ts-ignore rS,rP,inner,state are setup by reactorUnsubscribe() below
   const wR: WireReactor<T> = { [id]() {
@@ -145,7 +145,7 @@ const wireSignals = <T>(obj: T): {
   Object.keys(obj).forEach((k) => {
     let saved: unknown;
     let read: WireReactor<X> | boolean | undefined; // Multi-use temp variable
-    const id = `wS#${signalId++}(${k})`;
+    const id = `wS:${signalId++}{${k}}`;
     const wS = { [id](...args: (SubToken | unknown)[]) {
       // Case: Read-Subscribe
       // eslint-disable-next-line no-cond-assign
