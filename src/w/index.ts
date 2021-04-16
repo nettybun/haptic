@@ -1,6 +1,6 @@
 // Haptic Wire
 
-/* eslint-disable no-multi-spaces,@typescript-eslint/no-non-null-assertion */
+/* eslint-disable no-multi-spaces */
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 type X = any;
 
@@ -9,20 +9,20 @@ type WireReactor<T = unknown> = {
   (): T;
   /** User-provided function to run */
   fn: ($: SubToken) => T;
-  /** Signals that were read-subscribed by the reactor last run */
-  sRS: Set<WireSignal<X>>;
-  /** Signals that were read-passed by the reactor last run */
-  sRP: Set<WireSignal<X>>;
-  /** Signals passed over from read-subscribed computed-signals */
-  sCS: Set<WireSignal<X>>;
+  /** Signals that were read-subscribed last run */
+  sS: Set<WireSignal<X>>;
+  /** Signals that were read-passed last run */
+  sP: Set<WireSignal<X>>;
+  /** Signals that were given by computed-signals last run */
+  sC: Set<WireSignal<X>>;
   /** Other reactors created during this (parent) run */
   inner: Set<WireReactor<X>>;
-  /** How many parents this reactor has; see wR.inner */
-  depth: number;
-  /** Run count */
-  runs: number;
   /** FSM state: ON|OFF|RUNNING|PAUSED|STALE */
   state: WireReactorStates;
+  /** Number of parent reactors (see wR.inner); to sort reactors runs */
+  sort: number;
+  /** Run count */
+  runs: number;
   /** If part of a computed signal, this is its signal */
   cS?: WireSignal<T>;
   /** To check "if x is a reactor" */
@@ -103,7 +103,7 @@ const wireReactor = <T>(fn: ($: SubToken) => T): WireReactor<T> => {
       saved = adopt(wR, () => wR.fn($));
       wR.runs++;
     }
-    wR.state = wR.sRS.size
+    wR.state = wR.sS.size
       ? STATE_ON
       : STATE_OFF;
     return saved;
@@ -111,7 +111,7 @@ const wireReactor = <T>(fn: ($: SubToken) => T): WireReactor<T> => {
   wR.$wR = 1;
   wR.fn = fn;
   wR.runs = 0;
-  wR.depth = activeReactor ? activeReactor.depth + 1 : 0;
+  wR.sort = activeReactor ? activeReactor.sort + 1 : 0;
   if (activeReactor) activeReactor.inner.add(wR);
   reactorUnsubscribe(wR);
   return wR;
@@ -119,19 +119,18 @@ const wireReactor = <T>(fn: ($: SubToken) => T): WireReactor<T> => {
 
 const reactorUnsubscribe = (wR: WireReactor<X>): void => {
   const unlinkFromSignal = (signal: WireSignal<X>) => signal.rS.delete(wR);
-  // Skip newly created reactors since inner/rS/rP aren't yet defined
-  // TODO: Write a test for `runs` to check unexpected runs
+  // Skip newly created reactors since inner/sS/sP/sC aren't yet defined
   if (wR.runs) {
     wR.inner.forEach(reactorUnsubscribe);
-    wR.sRS.forEach(unlinkFromSignal);
-    wR.sCS.forEach(unlinkFromSignal);
+    wR.sS.forEach(unlinkFromSignal);
+    wR.sC.forEach(unlinkFromSignal);
   }
   wR.state = STATE_OFF;
   wR.inner = new Set();
   // Drop all signals now that they have been unlinked
-  wR.sRS = new Set();
-  wR.sRP = new Set();
-  wR.sCS = new Set();
+  wR.sS = new Set();
+  wR.sP = new Set();
+  wR.sC = new Set();
 };
 
 const reactorPause = (wR: WireReactor<X>) => {
@@ -151,25 +150,25 @@ const wireSignals = <T>(obj: T): {
       // eslint-disable-next-line no-cond-assign
       if (read = !args.length) {
         if (activeReactor) {
-          if (activeReactor.sRS.has(wS)) {
-            throw new Error(`Mixed sRS/sRP ${wS.name}`);
+          if (activeReactor.sS.has(wS)) {
+            throw new Error(`Mixed sS|sP ${wS.name}`);
           }
-          activeReactor.sRP.add(wS);
+          activeReactor.sP.add(wS);
         }
       }
       // Case: Read-Pass; could be any reactor not necessarily `activeReactor`
       // eslint-disable-next-line no-cond-assign
       else if (read = reactorTokenMap.get(args[0] as SubToken)) {
         type R = WireReactor<X>;
-        if ((read as R).sRP.has(wS)) {
-          throw new Error(`Mixed sRP/sRS ${wS.name}`);
+        if ((read as R).sP.has(wS)) {
+          throw new Error(`Mixed sP|sS ${wS.name}`);
         }
-        (read as R).sRS.add(wS);
+        (read as R).sS.add(wS);
         wS.rS.add((read as R));
         // Subscribing to a computed-signal also links cR's subscribed signals
-        wS.cR && wS.cR.sRS.forEach((s) => {
-          // Link to sXS not sRS. This way the "Mixed A/B" errors keep working
-          (read as R).sCS.add(s);
+        wS.cR && wS.cR.sS.forEach((s) => {
+          // Link to sC not sS. This way the "Mixed A/B" errors keep working
+          (read as R).sC.add(s);
           s.rS.add((read as R));
         });
       }
@@ -195,7 +194,7 @@ const wireSignals = <T>(obj: T): {
         }
         // Notify. Copy wS.wR since the Set() can grow while running and loop
         // infinitely. Depth ordering needs an array while Sinuous uses a Set()
-        const toRun = [...wS.rS].sort((a, b) => a.depth - b.depth);
+        const toRun = [...wS.rS].sort((a, b) => a.sort - b.sort);
         // Mark upstream computeds as stale. Must be in an isolated for-loop
         toRun.forEach((wR) => {
           if (wR.state === STATE_PAUSED || wR.cS) wR.state = STATE_STALE;
