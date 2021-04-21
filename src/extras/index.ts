@@ -1,7 +1,7 @@
-import { h, api } from './element';
-import { wR, adopt, reactorPause } from './wire';
+import { h, api } from '../element';
+import { wR, adopt, reactorPause } from '../wire';
 
-import type { WireSignal, WireReactor } from './wire';
+import type { WireSignal, WireReactor } from '../wire';
 
 type El = Element | Node | DocumentFragment;
 type Component = (...args: unknown[]) => El;
