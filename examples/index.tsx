@@ -4,12 +4,6 @@ import { h, api } from '../src/index.js';
 import { wS, wR, set, setNotEqual } from '../src/w/index.js';
 import type { WireReactor, WireSignal, SubToken } from '../src/w/index.js';
 
-// import {
-//   regDebugRender,
-//   regDebugPatchHandler,
-//   regDebugTrackSignalSubscriptions
-// } from './registryDebugging.js';
-
 // TypeScript #43683 helped me figure this out
 const data = wS({
   text: '',
@@ -47,7 +41,6 @@ Object.assign(window, { api, data, wR, wS, set });
 
 // TODO: insertPatcher(el, value) and propertyPatcher(el, prop, value)
 // api.patchHandler = regDebugPatchHandler;
-// regDebugTrackSignalSubscriptions(Object.values(data) as WireSignal[]);
 
 const externallyDefinedReactorTest = wR(($) => {
   return `data.text chars: ${data.text($).length}; `
@@ -86,7 +79,3 @@ const Page = () =>
   </main>;
 
 document.body.appendChild(<Page/>);
-
-// const regEl = <pre/>;
-// regDebugRender(regEl);
-// document.body.appendChild(regEl);
