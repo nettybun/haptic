@@ -13,7 +13,7 @@ type WireReactor<T = unknown> = {
   sC: Set<WireSignal<X>>;
   /** Other reactors created during this (parent) run */
   inner: Set<WireReactor<X>>;
-  /** FSM state: ON|OFF|RUNNING|PAUSED|STALE */
+  /** FSM state: OFF|ON|RUNNING|PAUSED|STALE */
   state: WireReactorState;
   /** Number of parent reactors (see wR.inner); to sort reactors runs */
   sort: number;
@@ -207,9 +207,11 @@ const wireSignals = <T>(obj: T): {
         toRun.forEach((wR) => {
           if (wR.state === STATE_PAUSED || wR.cS) wR.state = STATE_STALE;
         });
-        // Calls are ordered parent->child. Skip computed-signals; they're lazy
+        // Calls are ordered parent->child
         toRun.forEach((wR) => {
-          if (wR.state === STATE_ON && !wR.cS) wR();
+          // OFF|ON|RUNNING < PAUSED|STALE. Skips paused reactors and lazy
+          // computed-signals. OFF reactors shouldn't exist...
+          if (wR.state < STATE_PAUSED) wR();
         });
       }
       if (read) {
