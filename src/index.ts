@@ -52,7 +52,6 @@ declare namespace h {
 
     // Allow children on all DOM elements (not components, see above)
     // ESLint will error for children on void elements like <img/>
-    // XXX: Reactors aren't available for "onXYZ" event handlers
     type DOMAttributes<Target extends EventTarget>
       = GenericEventAttrs<Target> & { children?: unknown };
 
