@@ -26,11 +26,7 @@ type Component = (...args: unknown[]) => El;
 
 // TODO: insert.patch(el, value) and property.patch(el, prop, value)
 
-api.patchTest = (expr) => {
-  // Perflink benchmark says using reactorRegistry's Set.has() would be ~20%
-  // slower than Function#name's String.startsWith()
-  return typeof expr === 'function' && expr.name.startsWith('wR#');
-};
+api.patchTest = (expr) => (expr && (expr as { $wR: 1 }).$wR) as boolean;
 
 api.patchHandler = (expr, updateCallback) => {
   const prevFn = (expr as WireReactor).fn;
@@ -51,9 +47,9 @@ const svg = <T extends () => Element>(closure: T): ReturnType<T> => {
 const when = <T extends string>(
   condition: WireSignal<T>,
   views: { [k in T]?: Component }
-): WireReactor => {
+): WireReactor<El | undefined> => {
   const renderedElements = {} as { [k in T]?: El };
-  const renderedReactors = {} as { [k in T]?: WireReactor };
+  const renderedReactors = {} as { [k in T]?: WireReactor<void> };
   let condActive: T;
   return wR(($) => {
     const cond = condition($);
@@ -77,10 +73,13 @@ const when = <T extends string>(
 
 export { h, api, svg, when };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DistributeWireReactorType<T> = T extends any ? WireReactor<T> : never;
+
 declare namespace h {
   export namespace JSX {
-    type MaybeReactor<T> = T | WireReactor<T>;
-    type AllowReactorForProperties<T> = { [K in keyof T]: MaybeReactor<T[K]> };
+    type MaybeSomeReactor<T> = T | DistributeWireReactorType<T>;
+    type AllowReactorForProperties<T> = { [K in keyof T]: MaybeSomeReactor<T[K]> };
 
     type Element = HTMLElement | SVGElement | DocumentFragment;
 
@@ -99,8 +98,8 @@ declare namespace h {
     type HTMLAttributes<Target extends EventTarget>
       = AllowReactorForProperties<Omit<HTMLAttrs, 'style'>>
         & { style?:
-            | MaybeReactor<string>
-            | { [key: string]: MaybeReactor<string | number> };
+            | MaybeSomeReactor<string>
+            | { [key: string]: MaybeSomeReactor<string | number> };
           }
         & DOMAttributes<Target>;
 

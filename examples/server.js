@@ -12,6 +12,14 @@ esbuild
     format: 'esm',
     bundle: true,
     write: false,
+    // About 100 characters saved this way
+    define: {
+      STATE_OFF: 0,
+      STATE_ON: 1,
+      STATE_RUNNING: 2,
+      STATE_PAUSED: 3,
+      STATE_STALE: 4,
+    },
   })
   .then((sr) => {
     console.log(`Listening on http://${sr.host}:${sr.port}`);
