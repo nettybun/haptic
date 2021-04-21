@@ -32,12 +32,18 @@ const data = wS({
   //    error if its wrong so it's not as bad as "as T" like I originally
   //    thought; it's type safe.
 
-  countPlusOne: wR(($): number => data.count($) + 1),
-  countPlusTwo: wR(($): number => data.countPlusOne($) + 1),
+  countPlusOne: wR(($): number => {
+    console.log('Conputing countPlusOne');
+    return data.count($) + 1;
+  }),
+  countPlusTwo: wR(($): number => {
+    console.log('Conputing countPlusTwo');
+    return data.countPlusOne($) + 1;
+  }),
 });
 
 // @ts-ignore
-Object.assign(window, { data, wR, wS, api });
+Object.assign(window, { api, data, wR, wS, set });
 
 // TODO: insertPatcher(el, value) and propertyPatcher(el, prop, value)
 // api.patchHandler = regDebugPatchHandler;
