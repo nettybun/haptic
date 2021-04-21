@@ -15,10 +15,10 @@
 // to only run one instance of haptic/w because reactivity depends on accessing
 // some shared global state that is setup during import.
 
-import { h, api } from './h';
-import { wR, wS } from './w';
+import { h, api } from './element';
+import { wR, wS } from './wire';
 
-import type { WireSignal, WireReactor } from './w';
+import type { WireSignal, WireReactor } from './wire';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
 api.patch = (expr, updateCallback) => {
