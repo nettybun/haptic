@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { h, api } from '../src/index.js';
-import { wS, wR, v$ } from '../src/w/index.js';
+import { wS, wR, v$ } from '../src/wire/index.js';
 
 // TypeScript #43683 helped me figure this out
 const data = wS({
