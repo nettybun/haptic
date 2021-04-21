@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { h, api } from '../src/index.js';
-import { wS, wR } from '../src/w/index.js';
+import { wS, wR, set, setNotEqual } from '../src/w/index.js';
 import type { WireReactor, WireSignal, SubToken } from '../src/w/index.js';
 
 // import {
@@ -39,7 +39,7 @@ const data = wS({
 // @ts-ignore
 Object.assign(window, { data, wR, wS, api });
 
-// TODO: insert.patch(el, value) and property.patch(el, prop, value)
+// TODO: insertPatcher(el, value) and propertyPatcher(el, prop, value)
 // api.patchHandler = regDebugPatchHandler;
 // regDebugTrackSignalSubscriptions(Object.values(data) as WireSignal[]);
 
@@ -56,10 +56,12 @@ const Page = () =>
       placeholder='Type something...'
       value={wR(data.text)}
       onInput={(ev) => {
-        data.text(ev.currentTarget.value);
+        // Use setNotEqual so arrow keys and pasting identical text doesn't trigger
+        // Think of setNotSeen which collects a Set of seen values. NEAT.
+        data.text(setNotEqual, ev.currentTarget.value);
       }}
       style='display:block'/>
-    <button onClick={() => data.count(data.count() + 1)}>Inc</button>
+    <button onClick={() => data.count(set, data.count() + 1)}>Inc</button>
     <p>Here's math:
       {wR(($) => data.count($) < 5
         ? Math.PI * data.count($)
