@@ -54,7 +54,14 @@ type WireReactorStates =
   | typeof STATE_STALE;
 
 type UnpackArraySignals<T> = { [P in keyof T]: T[P] extends WireSignal<infer U> ? U : never };
-type SubToken = <T, X extends Array<() => T>>(...args: X) => UnpackArraySignals<X>;
+type SubToken = {
+  /** Allow $(s, s, s) to return an array of signal values */
+  <T, X extends Array<() => T>>(...args: X): UnpackArraySignals<X>;
+  /** Reactor to subscribe to */
+  wR: WireReactor<X>;
+  /** To check "if x is a subcription token" */
+  $$: 1;
+};
 
 let signalId = 0;
 let reactorId = 0;
@@ -63,9 +70,6 @@ let reactorId = 0;
 let activeReactor: WireReactor<X> | undefined;
 // WireSignals written to during a transaction(() => {...})
 let transactionSignals: Set<WireSignal<X>> | undefined;
-
-// Lookup $ to find which reactor it refers to
-const reactorTokenMap = new WeakMap<SubToken, WireReactor<X>>();
 
 // Symbol() doesn't gzip well. `[] as const` gzips best but isn't debuggable
 // without a lookup Map<> and other hacks.
@@ -96,10 +100,6 @@ const wireReactor = <T>(fn: ($: SubToken) => T): WireReactor<T> => {
       // memory management" in Sinuous/S.js
       reactorUnsubscribe(wR);
       wR.state = STATE_RUNNING;
-      // @ts-ignore It's not happy with this but the typing is correct
-      const $: SubToken = ((...wS) => wS.map((signal) => signal($)));
-      // Token is set but never deleted since it's a WeakMap
-      reactorTokenMap.set($, wR);
       saved = adopt(wR, () => wR.fn($));
       wR.runs++;
     }
@@ -112,6 +112,10 @@ const wireReactor = <T>(fn: ($: SubToken) => T): WireReactor<T> => {
   wR.fn = fn;
   wR.runs = 0;
   wR.sort = activeReactor ? activeReactor.sort + 1 : 0;
+  // @ts-ignore It's not happy with this but the typing is correct
+  const $: SubToken = ((...wS) => wS.map((signal) => signal($)));
+  $.$$ = 1;
+  $.wR = wR;
   if (activeReactor) activeReactor.inner.add(wR);
   reactorUnsubscribe(wR);
   return wR;
@@ -157,8 +161,9 @@ const wireSignals = <T>(obj: T): {
         }
       }
       // Case: Read-Pass; could be any reactor not necessarily `activeReactor`
-      // eslint-disable-next-line no-cond-assign
-      else if (read = reactorTokenMap.get(args[0] as SubToken)) {
+      // @ts-ignore
+      // eslint-disable-next-line
+      else if (read = args[0] && args[0].$$ && args[0].wR) {
         type R = WireReactor<X>;
         if ((read as R).sP.has(wS)) {
           throw new Error(`Mixed sP|sS ${wS.name}`);
