@@ -29,11 +29,10 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
     el.addEventListener(name, value as EventHandler);
     listeners[name] = value as EventHandler;
   }
-  else if (api.patchTest(value)) {
-    api.patchHandler(value, (v: unknown) => {
-      api.property(el, v, name, isAttr, isCss);
-    });
-  }
+  else if (api.patch(value, (v: unknown) => {
+    api.property(el, v, name, isAttr, isCss);
+  // eslint-disable-next-line no-empty
+  })) {}
   else if (isCss) {
     (el as HTMLElement | SVGElement).style.setProperty(name, value as string);
   }

@@ -40,11 +40,10 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
     // @ts-expect-error Reusing the variable but doesn't match the signature
     current = value;
   }
-  else if (api.patchTest(value)) {
-    api.patchHandler(value, (v: unknown) => {
-      current = api.insert(el, v, endMark, current, startNode);
-    });
-  }
+  else if (api.patch(value, (v: unknown) => {
+    current = api.insert(el, v, endMark, current, startNode);
+  // eslint-disable-next-line no-empty
+  })) {}
   else {
     // Block for Node, Fragment, Array, Functions, etc. This stringifies via h()
     if (endMark) {
@@ -68,7 +67,5 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
   }
   return current;
 };
-
-// TODO: insert.patch(el, value) and property.patch(el, prop, value)
 
 export { insert };

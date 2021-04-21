@@ -21,15 +21,15 @@ import { wR, wS } from './w';
 import type { WireSignal, WireReactor } from './w';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
-type El = Element | Node | DocumentFragment;
-type Component = (...args: unknown[]) => El;
-
-api.patchTest = (expr) => (expr && (expr as { $wR: 1 }).$wR) as boolean;
-
-api.patchHandler = (expr, updateCallback) => {
-  const prevFn = (expr as WireReactor).fn;
-  (expr as WireReactor).fn = ($) => updateCallback(prevFn($));
-  (expr as WireReactor)();
+api.patch = (expr, updateCallback) => {
+  // @ts-ignore
+  const $wR = (expr && expr.$wR) as boolean;
+  const { fn } = expr as WireReactor;
+  if ($wR && updateCallback) {
+    (expr as WireReactor).fn = ($) => updateCallback(fn($));
+    (expr as WireReactor)();
+  }
+  return $wR;
 };
 
 export { h, api, wS, wR };
