@@ -1,24 +1,26 @@
-// Haptic is a bundle of haptic/h and haptic/w as the reactivity engine. You
-// access haptic/w on its own:
+// Haptic is a bundle of haptic/dom and haptic/wire as the reactivity engine.
+// You access haptic/wire on its own:
 
 // import { h } from 'haptic';
-// import { wireSignals, wireReactor } from 'haptic/w';
+// import { wireSignals, wireReactor } from 'haptic/wire';
 
-// The bundle includes 2 utilities, svg() and when(), and extends the JSX
-// namespace to allow using WireReactors. Use haptic/h directly to use a vanilla
-// JSX namespace or to extend it for other reactive libraries such as
-// sinuous/observable, haptic/s, hyperactiv, or mobx
-
-// The 'haptic' package as a bundle doesn't embed haptic/w, so code will only be
+// The 'haptic' package doesn't embed haptic/wire in the bundle, so code is only
 // loaded once despite having two import sites. This should work well for both
-// bundlers and unbundled (ESM-only; Snowpack/UNPKG) workflows. It's important
-// to only run one instance of haptic/w because reactivity depends on accessing
+// bundlers and unbundled ESM-only/Snowpack/UNPKG workflows. It's important to
+// only run one instance of haptic/wire because reactivity depends on accessing
 // some shared global state that is setup during import.
 
-import { h, api } from './element';
+// This bundle also extends the JSX namespace to allow using WireReactors. Use
+// haptic/dom directly to use a vanilla JSX namespace or to extend it for other
+// reactive libraries such as sinuous/observable, haptic/s, hyperactiv, etc.
+
+// Utilities functions svg() and when() are available in haptic/extras.
+
+import { h, api } from './dom';
+// TODO: Actually split the import sites. This is only for `npm run size:bundle`
 import { wR, wS } from './wire';
 
-import type { WireSignal, WireReactor } from './wire';
+import type { WireReactor } from './wire';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
 api.patch = (expr, updateCallback) => {

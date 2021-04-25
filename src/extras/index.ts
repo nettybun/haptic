@@ -1,4 +1,4 @@
-import { h, api } from '../element';
+import { h, api } from '../dom';
 import { wR, adopt, reactorPause } from '../wire';
 
 import type { WireSignal, WireReactor } from '../wire';
