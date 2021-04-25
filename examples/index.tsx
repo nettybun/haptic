@@ -2,30 +2,11 @@
 
 import { h, api } from '../src/index.js';
 import { wS, wR, v$ } from '../src/w/index.js';
-import type { WireReactor, WireSignal, SubToken } from '../src/w/index.js';
 
 // TypeScript #43683 helped me figure this out
 const data = wS({
   text: '',
   count: 0,
-  // TODO:
-  // - `name: () => X` works but will need ($: SubToken) manually defined
-
-  // - `($): number => X` works but needs X type manually defined. This also
-  //    isn't great for being transparent and honest. All I see in wS is X is a
-  //    function. What if they accidentally passed a function not knowing about
-  //    computed signals at all. It's best to be explicit. `$name: () => wR`
-  //    would be most explicit and less accidental? TS can use tag template
-  //    types to detect $ but what about error handling then? I still have to
-  //    call the function though, which isn't great... That could have side
-  //    effects and what if I call it to unpack the wR and it's not a wR. ohno.
-
-  // - `wR($ => X)` directly needs X type manually defined. However, it's
-  //    easiest to check in wS, it's most explicit, zero accidents, and $ is
-  //    typed because wR... Writing the return type isn't super fun but it will
-  //    error if its wrong so it's not as bad as "as T" like I originally
-  //    thought; it's type safe.
-
   countPlusOne: wR(($): number => {
     console.log('Conputing countPlusOne');
     return data.count($) + 1;
