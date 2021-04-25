@@ -1,7 +1,7 @@
 // Haptic Wire
 
 type WireReactor<T = unknown> = {
-  /** Start+Run */
+  /** Run the reactor */
   (): T;
   /** User-provided function to run */
   fn: ($: SubToken) => T;
@@ -11,7 +11,7 @@ type WireReactor<T = unknown> = {
   sP: Set<WireSignal<X>>;
   /** Signals that were given by computed-signals last run */
   sC: Set<WireSignal<X>>;
-  /** Other reactors created during this (parent) run */
+  /** Other reactors created during this run (children of this parent) */
   inner: Set<WireReactor<X>>;
   /** FSM state: OFF|ON|RUNNING|PAUSED|STALE */
   state: WireReactorState;
@@ -81,16 +81,23 @@ declare const STATE_PAUSED  = 3;
 // Reactor runs are skipped if they're paused or they're for a computed signal
 declare const STATE_STALE   = 4;
 
+/**
+ * Void subcription token. Used when a function demands a token but you don't
+ * want to consent to any signal subscriptions. */
 // @ts-ignore
 const v$: SubToken = ((...wS) => wS.map((signal) => signal(v$)));
 
 // In wireSignal and wireReactor `{ [id]() {} }[id]` preserves the function name
 // which is useful for debugging
 
+/**
+ * Creates a reactor. Turn the reactor on by manually running it. Any signals
+ * who read-subscribed will re-run the reactor when written to. Reactors are
+ * named by their function's name and a counter. */
 const wireReactor = <T>(fn: ($: SubToken) => T): WireReactor<T> => {
   const id = `wR:${reactorId++}{${fn.name}}`;
   let saved: T;
-  // @ts-ignore rS,rP,inner,state are setup by reactorUnsubscribe() below
+  // @ts-ignore function properties are setup by reactorReset() below
   const wR: WireReactor<T> = { [id]() {
     if (wR.state === STATE_RUNNING) {
       throw new Error(`Loop ${wR.name}`);
@@ -134,6 +141,9 @@ const reactorReset = (wR: WireReactor<X>): void => {
   wR.sC = new Set();
 };
 
+/**
+ * Removes two-way subscriptions between its signals and itself. This also turns
+ * off the reactor until it is manually re-run. */
 const reactorUnsubscribe = (wR: WireReactor<X>): void => {
   const unlinkFromSignal = (signal: WireSignal<X>) => signal.rS.delete(wR);
   wR.inner.forEach(reactorUnsubscribe);
@@ -142,11 +152,19 @@ const reactorUnsubscribe = (wR: WireReactor<X>): void => {
   reactorReset(wR);
 };
 
+/**
+ * Pauses a reactor. Trying to run the reactor again will unpause; if no signals
+ * were written during the pause then the run is skipped. */
 const reactorPause = (wR: WireReactor<X>) => {
   wR.state = STATE_PAUSED;
   wR.inner.forEach(reactorPause);
 };
 
+/**
+ * Creates signals for each object entry. Signals are read/write variables which
+ * hold a list of subscribed reactors. When any value is written reactors are
+ * re-run. Writing a reactor to a signal creates a lazy computed-signal. Signals
+ * are named by the key of the object entry and a global counter. */
 const wireSignals = <T>(obj: T): {
   [K in keyof T]: WireSignal<T[K] extends WireReactor<infer R> ? R : T[K]>;
 } => {
@@ -234,10 +252,9 @@ const wireSignals = <T>(obj: T): {
   return obj;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const set = <T>(prev: T, next: T): boolean => true;
-const setNotEqual = <T>(prev: T, next: T): boolean => prev !== next;
-
+/**
+ * Batch signal writes so only the last write per signal is applied. Values are
+ * committed at the end of the function call. */
 const transaction = <T>(fn: () => T): T => {
   const prev = transactionSignals;
   transactionSignals = new Set();
@@ -258,6 +275,10 @@ const transaction = <T>(fn: () => T): T => {
   return ret as T;
 };
 
+/**
+ * Run a function with a reactor set as the active listener. Nested children
+ * reactors are adopted (see wR.sort and wR.inner). This also affects signal
+ * read consistent checks for read-pass (sP) and read-subscribe (sS). */
 const adopt = <T>(parentReactor: WireReactor<X>, fn: () => T): T => {
   const prev = activeReactor;
   activeReactor = parentReactor;
@@ -284,4 +305,5 @@ export {
   adopt,
   v$ // Actual subtokens are only ever provided by a reactor
 };
+
 export type { WireSignal, WireReactor, WireReactorState, SubToken };
