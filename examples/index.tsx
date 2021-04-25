@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { h, api } from '../src/index.js';
-import { wS, wR, set, setNotEqual } from '../src/w/index.js';
+import { wS, wR, v$ } from '../src/w/index.js';
 import type { WireReactor, WireSignal, SubToken } from '../src/w/index.js';
 
 // TypeScript #43683 helped me figure this out
@@ -37,7 +37,7 @@ const data = wS({
 });
 
 // @ts-ignore
-Object.assign(window, { api, data, wR, wS, set });
+Object.assign(window, { api, data, wR, wS });
 
 // TODO: insertPatcher(el, value) and propertyPatcher(el, prop, value)
 // api.patchHandler = regDebugPatchHandler;
@@ -45,6 +45,27 @@ Object.assign(window, { api, data, wR, wS, set });
 const externallyDefinedReactorTest = wR(($) => {
   return `data.text chars: ${data.text($).length}; `
     + `data.count chars: ${String(data.count($)).length}`;
+});
+
+const externalReactorMacroTest = ($ = v$) => {
+  data.count($);
+};
+// Subscribe to both data.text and data.count
+wR(($) => {
+  data.text($);
+  externalReactorMacroTest($);
+});
+// Subscribe to only data.text
+wR(($) => {
+  data.text($);
+  // This doesn't write "undefined" to data.count:
+  externalReactorMacroTest();
+});
+// Subscribe to only data.text
+wR(($) => {
+  data.text($);
+  // Explicit and function author doesn't need to specify a default parameter:
+  externalReactorMacroTest(v$);
 });
 
 const Page = () =>
@@ -57,10 +78,10 @@ const Page = () =>
       onInput={(ev) => {
         // Use setNotEqual so arrow keys and pasting identical text doesn't trigger
         // Think of setNotSeen which collects a Set of seen values. NEAT.
-        data.text(setNotEqual, ev.currentTarget.value);
+        data.text(ev.currentTarget.value);
       }}
       style='display:block'/>
-    <button onClick={() => data.count(set, data.count() + 1)}>Inc</button>
+    <button onClick={() => data.count(data.count() + 1)}>Inc</button>
     <p>Here's math:
       {wR(($) => data.count($) < 5
         ? Math.PI * data.count($)
