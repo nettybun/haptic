@@ -29,7 +29,7 @@ type WireSignal<T = unknown> = {
   /** Read value */
   (): T;
   /** Write value; notifying reactors */ // Ordered before ($):T for TS to work
-  (valueTestFn: Comparator<T>, value: T): void;
+  (value: T): void;
   /** Read value & subscribe */
   ($: SubToken): T;
   /** Reactors subscribed to this signal */
@@ -52,8 +52,6 @@ type SubToken = {
   /** To check "if x is a subcription token" */
   $$: 1;
 };
-
-type Comparator<T = unknown> = (prev: T, next: T) => boolean;
 
 type WireReactorState =
   | typeof STATE_OFF
@@ -82,6 +80,9 @@ declare const STATE_RUNNING = 2;
 declare const STATE_PAUSED  = 3;
 // Reactor runs are skipped if they're paused or they're for a computed signal
 declare const STATE_STALE   = 4;
+
+// @ts-ignore
+const v$: SubToken = ((...wS) => wS.map((signal) => signal(v$)));
 
 // In wireSignal and wireReactor `{ [id]() {} }[id]` preserves the function name
 // which is useful for debugging
@@ -115,7 +116,7 @@ const wireReactor = <T>(fn: ($: SubToken) => T): WireReactor<T> => {
   wR.fn = fn;
   wR.runs = 0;
   wR.sort = activeReactor ? activeReactor.sort + 1 : 0;
-  // @ts-ignore It's not happy with this but the typing is correct
+  // @ts-ignore
   const $: SubToken = ((...wS) => wS.map((signal) => signal($)));
   $.$$ = 1;
   $.wR = wR;
@@ -164,6 +165,9 @@ const wireSignals = <T>(obj: T): {
           activeReactor.sP.add(wS);
         }
       }
+      // Case: Void token
+      // eslint-disable-next-line no-empty
+      else if ((read = args[0] === v$)) {}
       // Case: Read-Subscribe
       // @ts-ignore
       else if ((read = args[0] && args[0].$$ && args[0].wR)) {
@@ -180,11 +184,11 @@ const wireSignals = <T>(obj: T): {
         });
       }
       // Case: Write
-      else if (args.length === 2 && (args[0] as Comparator)(saved, args[1])) {
+      else {
         // If in a transaction; defer saving the value
         if (transactionSignals) {
           transactionSignals.add(wS);
-          wS.tV = args[1] as T[keyof T];
+          wS.tV = args[0] as T[keyof T];
           return;
         }
         // If overwriting a computed-signal, unsubscribe the reactor
@@ -193,7 +197,7 @@ const wireSignals = <T>(obj: T): {
           delete wS.cR.cS; // Part of unsubscribing/cleaning the reactor
           delete wS.cR;
         }
-        saved = args[1] as T[keyof T];
+        saved = args[0] as T[keyof T];
         // @ts-ignore If writing a reactor, register as a computed-signal
         if (saved && saved.$wR) {
           (saved as R).cS = wS;
@@ -222,7 +226,7 @@ const wireSignals = <T>(obj: T): {
     wS.$wS = 1;
     wS.rS = new Set<WireReactor<X>>();
     // Call wS which runs the "Case: Write" to de|initialize computed-signals
-    wS(set, obj[k as keyof T]);
+    wS(obj[k as keyof T]);
     // @ts-ignore Mutation of T
     obj[k] = wS;
   });
@@ -278,7 +282,6 @@ export {
   reactorPause,
   transaction,
   adopt,
-  set,
-  setNotEqual
+  v$ // Actual subtokens are only ever provided by a reactor
 };
-export type { WireSignal, WireReactor, WireReactorState, SubToken, Comparator };
+export type { WireSignal, WireReactor, WireReactorState, SubToken };
