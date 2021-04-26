@@ -15,7 +15,7 @@ const svg = <T extends () => Node>(closure: T): ReturnType<T> => {
   return el as ReturnType<T>;
 };
 
-/** Switches DOM content when the signal in `condition` is written to */
+/** Switches DOM content when signals in the given reactor are written to */
 const when = <T extends string>(
   reactor: WireReactor<T>,
   views: { [k in T]?: Component }
