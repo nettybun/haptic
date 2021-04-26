@@ -1,7 +1,7 @@
 import { h, api } from '../dom';
 import { wR, adopt, reactorPause } from '../wire';
 
-import type { WireSignal, WireReactor } from '../wire';
+import type { WireReactor } from '../wire';
 
 type El = Element | Node | DocumentFragment;
 type Component = (...args: unknown[]) => El;
@@ -17,17 +17,19 @@ const svg = <T extends () => Node>(closure: T): ReturnType<T> => {
 
 /** Switches DOM content when the signal in `condition` is written to */
 const when = <T extends string>(
-  condition: WireSignal<T>,
+  reactor: WireReactor<T>,
   views: { [k in T]?: Component }
 ): WireReactor<El | undefined> => {
   const renderedElements = {} as { [k in T]?: El };
   const renderedReactors = {} as { [k in T]?: WireReactor<void> };
   let condActive: T;
-  return wR(($) => {
-    const cond = condition($);
+  const { fn } = reactor;
+  // @ts-ignore It's not T anymore; the type has changed to `El | undefined`
+  reactor.fn = function when($) {
+    const cond = fn($);
     if (cond !== condActive && views[cond]) {
       // Tick. Pause reactors and keep DOM intact
-      reactorPause(renderedReactors[condActive] as WireReactor);
+      if (condActive) reactorPause(renderedReactors[condActive] as WireReactor);
       condActive = cond;
       // Rendered?
       if (renderedElements[cond]) {
@@ -39,8 +41,9 @@ const when = <T extends string>(
       renderedElements[cond] = adopt(reactor, () => h(views[cond] as Component));
       renderedReactors[cond] = reactor;
     }
-    return renderedElements[cond];
-  });
+    return renderedElements[cond] as El | undefined;
+  };
+  return reactor as unknown as WireReactor<El | undefined>;
 };
 
 export { when, svg };

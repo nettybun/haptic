@@ -2,6 +2,7 @@
 
 import { h, api } from '../src/index.js';
 import { wS, wR, v$ } from '../src/wire/index.js';
+import { when } from '../src/extras/index.js';
 
 // TypeScript #43683 helped me figure this out
 const data = wS({
@@ -78,6 +79,11 @@ const Page = () =>
     </p>
     <p>Functions that aren't reactors? {() => <span>Function is serialized</span>}</p>
     <p>{externallyDefinedReactorTest}</p>
+    <p>Test for <code>when()</code>:</p>
+    {when(wR(($) => data.count($) > 5 ? 'T' : 'F'), {
+      T: () => <p>There have been more than 5 clicks</p>,
+      F: () => <p>Current click count is {wR(data.count)}</p>,
+    })}
   </main>;
 
 document.body.appendChild(<Page/>);
