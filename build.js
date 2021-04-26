@@ -1,19 +1,36 @@
 import esbuild from 'esbuild';
+// BUG: gzip() throws; opened fflate#55
+import { gzipSync } from 'fflate';
+import { readFile, writeFile } from 'fs/promises';
 
 const externalPlugin = {
   name: 'external',
   setup(build) {
     build.onResolve({ filter: /\.\/(dom|wire)$/ }, (args) => {
-      return { path: args.path, external: true };
+      const importPath = args.path.replace(/^.+\//, 'haptic/');
+      return { path: importPath, external: true };
     });
   },
 };
 
-const shared = {
+const sourceComment = '\n//# sourceMappingURL=index.js.map';
+
+esbuild.build({
+  entryPoints: [
+    'src/dom/index.ts',
+    'src/wire/index.ts',
+    'src/utils/index.ts',
+    'src/index.ts',
+  ],
+  outdir: 'publish',
+  plugins: [
+    externalPlugin,
+  ],
   format: 'esm',
   bundle: true,
   sourcemap: true,
   minify: true,
+  metafile: true,
   // About 100 characters saved this way
   define: {
     STATE_OFF: 0,
@@ -22,36 +39,30 @@ const shared = {
     STATE_PAUSED: 3,
     STATE_STALE: 4,
   },
-};
-
-Promise.all([
-  esbuild.build({
-    entryPoints: ['src/dom/index.ts'],
-    outfile: 'publish/dom/index.js',
-    ...shared,
-  }),
-  esbuild.build({
-    entryPoints: ['src/wire/index.ts'],
-    outfile: 'publish/wire/index.js',
-    ...shared,
-  }),
-  esbuild.build({
-    entryPoints: ['src/extras/index.ts'],
-    outfile: 'publish/extras/index.js',
-    plugins: [
-      externalPlugin,
-    ],
-    ...shared,
-  }),
-  esbuild.build({
-    entryPoints: ['src/index.ts'],
-    outfile: 'publish/index.js',
-    plugins: [
-      externalPlugin,
-    ],
-    ...shared,
-  }),
-])
+})
+  .then((build) => Promise.all(
+    Object.keys(build.metafile.outputs)
+      .filter((filePath) => !filePath.endsWith('.map'))
+      .map(async (file) => {
+        const readDataFull = await readFile(file);
+        const indexEndOfCode = readDataFull.length - sourceComment.length;
+        const readData = readDataFull.subarray(0, indexEndOfCode);
+        const writeData = gzipSync(readData, { consume: true, level: 9 });
+        writeFile(file + '.gz', writeData);
+        return {
+          file,
+          min: readData.length,
+          mingz: writeData.length,
+        };
+      })
+  ))
+  .then((sizeObjects) => {
+    sizeObjects.forEach(({ file, min, mingz }) => {
+      file = file.replace('publish/', '');
+      console.log(
+        `${file.padEnd(15)} min:${String(min).padEnd(5)} min+gzip:${mingz}`);
+    });
+  })
   .catch((err) => {
     console.error(err);
     process.exit(1);
