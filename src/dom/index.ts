@@ -15,8 +15,17 @@ const api: {
   property: typeof property;
   // Renamed for compatibility with Sinuous' community libraries
   rm: typeof remove;
-  // Reactivity could be haptic/w, sinuous/observable, mobx, etc
-  patch: (expr: unknown, updateCallback?: (value: unknown) => void) => boolean,
+  /** DOM patcher. Receives unknown JSX elements and attributes. To mark the DOM
+  location as reactive, return true. Call patchDOM() anytime to update. */
+  patch: (
+    value: unknown,
+    // Reactivity could be haptic/w, sinuous/observable, mobx, etc
+    patchDOM?: (value: unknown) => void,
+    // Element being patched
+    el?: Node,
+    // If this is patching an element property, this is the attribute
+    attribute?: string
+  ) => boolean,
   /** Element namespace URL such as SVG or MathML */
   ns?: string;
 } = {

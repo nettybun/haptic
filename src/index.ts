@@ -26,13 +26,13 @@ import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements 
 // Swap out h to have the correct JSX namespace; commit #d7cd2819
 // declare api = Omit<typeof _api, 'h'> & { h: typeof h };
 
-api.patch = (expr, updateCallback) => {
+api.patch = (value, patchDOM) => {
   // @ts-ignore
-  const $wR = (expr && expr.$wR) as boolean;
-  const { fn } = expr as WireReactor;
-  if ($wR && updateCallback) {
-    (expr as WireReactor).fn = ($) => updateCallback(fn($));
-    (expr as WireReactor)();
+  const $wR = (value && value.$wR) as boolean;
+  const { fn } = value as WireReactor;
+  if ($wR && patchDOM) {
+    (value as WireReactor).fn = ($) => patchDOM(fn($));
+    (value as WireReactor)();
   }
   return $wR;
 };
