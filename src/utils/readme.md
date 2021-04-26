@@ -11,7 +11,7 @@ Usage:
 
 ```tsx
 import { h } from 'haptic';
-import { svg } from 'haptic/extras';
+import { svg } from 'haptic/utils';
 
 cosnt <Page> = () =>
   <p>HTML text with an add icon {svg(() =>
@@ -37,7 +37,7 @@ Usage:
 ```tsx
 import { h } from 'haptic';
 import { wireSignals, wireReactor as wR } from 'haptic/wire';
-import { when } from 'haptic/extras';
+import { when } from 'haptic/utils';
 
 const data = wireSignals({
   count: 0,
