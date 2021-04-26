@@ -2,7 +2,7 @@
 
 import { h, api } from '../src/index.js';
 import { wS, wR, v$ } from '../src/wire/index.js';
-import { when } from '../src/extras/index.js';
+import { when } from '../src/utils/index.js';
 
 // TypeScript #43683 helped me figure this out
 const data = wS({
@@ -20,9 +20,6 @@ const data = wS({
 
 // @ts-ignore
 Object.assign(window, { api, data, wR, wS });
-
-// TODO: insertPatcher(el, value) and propertyPatcher(el, prop, value)
-// api.patchHandler = regDebugPatchHandler;
 
 const externallyDefinedReactorTest = wR(($) => {
   return `data.text chars: ${data.text($).length}; `
