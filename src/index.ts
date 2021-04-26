@@ -23,6 +23,9 @@ import { wR, wS } from './wire';
 import type { WireReactor } from './wire';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
+// Swap out h to have the correct JSX namespace; commit #d7cd2819
+// declare api = Omit<typeof _api, 'h'> & { h: typeof h };
+
 api.patch = (expr, updateCallback) => {
   // @ts-ignore
   const $wR = (expr && expr.$wR) as boolean;
