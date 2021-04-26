@@ -1,6 +1,5 @@
 import esbuild from 'esbuild';
-// BUG: gzip() throws; opened fflate#55
-import { gzipSync } from 'fflate';
+import { gzip } from 'fflate';
 import { readFile, writeFile } from 'fs/promises';
 
 const externalPlugin = {
@@ -47,8 +46,13 @@ esbuild.build({
         const readDataFull = await readFile(file);
         const indexEndOfCode = readDataFull.length - sourceComment.length;
         const readData = readDataFull.subarray(0, indexEndOfCode);
-        const writeData = gzipSync(readData, { consume: true, level: 9 });
-        writeFile(file + '.gz', writeData);
+        const writeData = await new Promise((res, rej) => {
+          gzip(readData, { consume: true, level: 9 }, (err, data) => {
+            if (err) rej(err);
+            writeFile(file + '.gz', data);
+            res(data);
+          });
+        });
         return {
           file,
           min: readData.length,
