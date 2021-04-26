@@ -10,35 +10,49 @@ very different behaviour.
 Usage:
 
 ```tsx
-import { h } from '../src';
-import { svg } from '../src/extras';
+import { h } from 'haptic';
+import { svg } from 'haptic/extras';
 
-document.body.appendChild(
+cosnt <Page> = () =>
   <p>HTML text with an add icon {svg(() =>
     <svg viewBox="0 0 15 15" fill="none" width="15" height="15">
       <path d="M7.5 1v13M1 7.5h13" stroke="#000"/>
     </svg>
   )} inlined in the sentence.
-  </p>
-);
+  </p>;
+
+document.body.appendChild(<Page/>);
 ```
 
-**`when(condition: WireSignal<T>, views: { [key: T]: () => Node })`**
+**`when(condition: WireReactor<T>, views: { [key: T]: () => Node })`**
 
-Renders a different DOM node depending on a signal's value. The value is matched
-to an object key in `views`. Useful when paired with _computed-signals_ which
-can return a nice value such as "T"/"F" for true/false, shown below. When a view
-is asked to unrender all reactors are paused so the view won't update while off
-screen. The DOM nodes are still live and held in memory, however.
+Renders a DOM node by matching the `condition` reactors's value to an object key
+in `views`. Useful when paired with a reactor which returns a nice value such as
+"T"/"F" shown below. When a view is asked to unrender, all nested reactors are
+paused so the view won't update while off screen. The DOM nodes are still cached
+and held in memory, however.
 
 Usage:
 
 ```tsx
-import { h } from '../src';
-import { when } from '../src/extras';
+import { h } from 'haptic';
+import { wireSignals, wireReactor as wR } from 'haptic/wire';
+import { when } from 'haptic/extras';
 
-// TODO: Port a nice example from the stayknit repo. Many are used over there.
-document.body.appendChild();
+const data = wireSignals({
+  count: 0,
+});
+
+const Page = () =>
+  <div>
+    <p>Content below changes when <code>data.count > 5</code></p>
+    {when(wR($ => data.count($) > 5 ? "T" : "F"), {
+      T: () => <p>There have been more than 5 clicks</p>,
+      F: () => <p>Current click count is {wR(data.count)}</p>,
+    })}
+  </div>;
+
+document.body.appendChild(<Page/>);
 ```
 
 ---
