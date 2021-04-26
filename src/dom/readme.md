@@ -1,4 +1,4 @@
-JSX hyperscript reviver for Haptic.
+Hyperscript reviver for JSX in Haptic.
 
 This is a fork of Sinuous' "h" package that has been ported to TypeScript,
 simplified in a few places, and adapted to support a general [`api.patch()`][1]
