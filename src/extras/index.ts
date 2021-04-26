@@ -7,7 +7,7 @@ type El = Element | Node | DocumentFragment;
 type Component = (...args: unknown[]) => El;
 
 /** Renders SVGs by setting h() to the SVG namespace */
-const svg = <T extends () => Element>(closure: T): ReturnType<T> => {
+const svg = <T extends () => Node>(closure: T): ReturnType<T> => {
   const prev = api.ns;
   api.ns = 'http://www.w3.org/2000/svg';
   const el = closure();
@@ -15,7 +15,7 @@ const svg = <T extends () => Element>(closure: T): ReturnType<T> => {
   return el as ReturnType<T>;
 };
 
-/** Switches content when the vocal in `condition` is updated */
+/** Switches DOM content when the signal in `condition` is written to */
 const when = <T extends string>(
   condition: WireSignal<T>,
   views: { [k in T]?: Component }
