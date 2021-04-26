@@ -3,10 +3,8 @@ import esbuild from 'esbuild';
 const externalPlugin = {
   name: 'external',
   setup(build) {
-    build.onResolve({ filter: /\.\/(h|w)$/ }, (args) => {
-      // Resolve as 'h' or 'w'
-      const lastChar = args.path[args.path.length - 1];
-      return { path: `./${lastChar}`, external: true };
+    build.onResolve({ filter: /\.\/(dom|wire)$/ }, (args) => {
+      return { path: args.path, external: true };
     });
   },
 };
@@ -28,13 +26,21 @@ const shared = {
 
 Promise.all([
   esbuild.build({
-    entryPoints: ['src/h/index.ts'],
-    outfile: 'publish/h/index.js',
+    entryPoints: ['src/dom/index.ts'],
+    outfile: 'publish/dom/index.js',
     ...shared,
   }),
   esbuild.build({
-    entryPoints: ['src/w/index.ts'],
-    outfile: 'publish/w/index.js',
+    entryPoints: ['src/wire/index.ts'],
+    outfile: 'publish/wire/index.js',
+    ...shared,
+  }),
+  esbuild.build({
+    entryPoints: ['src/extras/index.ts'],
+    outfile: 'publish/extras/index.js',
+    plugins: [
+      externalPlugin,
+    ],
     ...shared,
   }),
   esbuild.build({
