@@ -1,7 +1,7 @@
 import { h, api } from '../dom';
-import { wR, adopt, reactorPause } from '../wire';
+import { subscriber, subAdopt, subPause } from '../wire';
 
-import type { WireReactor } from '../wire';
+import type { WireSubscriber } from '../wire';
 
 type El = Element | Node | DocumentFragment;
 type Component = (...args: unknown[]) => El;
@@ -17,33 +17,33 @@ const svg = <T extends () => Node>(closure: T): ReturnType<T> => {
 
 /** Switches DOM content when signals in the given reactor are written to */
 const when = <T extends string>(
-  reactor: WireReactor<T>,
+  sub: WireSubscriber<T>,
   views: { [k in T]?: Component }
-): WireReactor<El | undefined> => {
+): WireSubscriber<El | undefined> => {
   const renderedElements = {} as { [k in T]?: El };
-  const renderedReactors = {} as { [k in T]?: WireReactor<void> };
+  const renderedSubs = {} as { [k in T]?: WireSubscriber<void> };
   let condActive: T;
-  const { fn } = reactor;
+  const { fn } = sub;
   // @ts-ignore It's not T anymore; the type has changed to `El | undefined`
-  reactor.fn = function when($) {
+  sub.fn = function when($) {
     const cond = fn($);
     if (cond !== condActive && views[cond]) {
       // Tick. Pause reactors and keep DOM intact
-      if (condActive) reactorPause(renderedReactors[condActive] as WireReactor);
+      if (condActive) subPause(renderedSubs[condActive] as WireSubscriber);
       condActive = cond;
       // Rendered?
       if (renderedElements[cond]) {
-        // Then unpause. If nothing has changed then no wR.rS/wR.rP links change
-        (renderedReactors[cond] as WireReactor)();
+        // Then unpause. If nothing has changed then no sub.rS/sub.rP links change
+        (renderedSubs[cond] as WireSubscriber)();
       }
       // Able to render?
-      const reactor = wR(() => {});
-      renderedElements[cond] = adopt(reactor, () => h(views[cond] as Component));
-      renderedReactors[cond] = reactor;
+      const sub = subscriber(() => {});
+      renderedElements[cond] = subAdopt(sub, () => h(views[cond] as Component));
+      renderedSubs[cond] = sub;
     }
     return renderedElements[cond] as El | undefined;
   };
-  return reactor as unknown as WireReactor<El | undefined>;
+  return sub as unknown as WireSubscriber<El | undefined>;
 };
 
 export { when, svg };

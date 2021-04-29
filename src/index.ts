@@ -18,9 +18,9 @@
 
 import { h, api } from './dom';
 // TODO: Actually split the import sites. This is only for `npm run size:bundle`
-import { wR, wS } from './wire';
+import { signalPackage, sub } from './wire';
 
-import type { WireReactor } from './wire';
+import type { WireSubscriber } from './wire';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
 // Swap out h to have the correct JSX namespace; commit #d7cd2819
@@ -29,23 +29,23 @@ import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements 
 api.patch = (value, patchDOM) => {
   // @ts-ignore
   const $wR = (value && value.$wR) as boolean;
-  const { fn } = value as WireReactor;
+  const { fn } = value as WireSubscriber;
   if ($wR && patchDOM) {
-    (value as WireReactor).fn = ($) => patchDOM(fn($));
-    (value as WireReactor)();
+    (value as WireSubscriber).fn = ($) => patchDOM(fn($));
+    (value as WireSubscriber)();
   }
   return $wR;
 };
 
-export { h, api, wS, wR };
+export { h, api, signalPackage, sub };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DistributeWireReactorType<T> = T extends any ? WireReactor<T> : never;
+type DistributeSubscriberT<T> = T extends any ? WireSubscriber<T> : never;
 
 declare namespace h {
   export namespace JSX {
-    type MaybeSomeReactor<T> = T | DistributeWireReactorType<T>;
-    type AllowReactorForProperties<T> = { [K in keyof T]: MaybeSomeReactor<T[K]> };
+    type MaybeSub<T> = T | DistributeSubscriberT<T>;
+    type AllowSubForProperties<T> = { [K in keyof T]: MaybeSub<T[K]> };
 
     type Element = HTMLElement | SVGElement | DocumentFragment;
 
@@ -61,15 +61,15 @@ declare namespace h {
       = GenericEventAttrs<Target> & { children?: unknown };
 
     type HTMLAttributes<Target extends EventTarget>
-      = AllowReactorForProperties<Omit<HTMLAttrs, 'style'>>
+      = AllowSubForProperties<Omit<HTMLAttrs, 'style'>>
         & { style?:
-            | MaybeSomeReactor<string>
-            | { [key: string]: MaybeSomeReactor<string | number> };
+            | MaybeSub<string>
+            | { [key: string]: MaybeSub<string | number> };
           }
         & DOMAttributes<Target>;
 
     type SVGAttributes<Target extends EventTarget>
-      = AllowReactorForProperties<SVGAttrs> & HTMLAttributes<Target>;
+      = AllowSubForProperties<SVGAttrs> & HTMLAttributes<Target>;
 
     type IntrinsicElements =
       & { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>; }

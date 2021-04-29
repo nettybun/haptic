@@ -35,11 +35,11 @@ esbuild.build({
   metafile: true,
   // About 100 characters saved this way
   define: {
-    STATE_OFF: 0,
-    STATE_ON: 1,
-    STATE_RUNNING: 2,
-    STATE_PAUSED: 3,
-    STATE_STALE: 4,
+    STATE_CLEARED: 0,
+    STATE_RUNNING: 1,
+    STATE_LINKED_WAITING: 2,
+    STATE_LINKED_PAUSED: 3,
+    STATE_LINKED_STALE: 4,
   },
 })
   .then((build) => Promise.all(

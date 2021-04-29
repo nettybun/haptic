@@ -14,7 +14,7 @@
   "scripts": {
     "build": "node build.js",
     "types": "tsc --project tsconfig.json",
-    "bundlesize": "echo $(esbuild --bundle src/index.ts --format=esm --minify --define:STATE_OFF=0 --define:STATE_ON=1 --define:STATE_RUNNING=2 --define:STATE_PAUSED=3 --define:STATE_STALE=4 | gzip -9 | wc -c) min+gzip bytes"
+    "bundlesize": "echo $(esbuild --bundle src/index.ts --format=esm --minify --define:STATE_CLEARED=0 --define:STATE_RUNNING=1 --define:STATE_LINKED_WAITING=2 --define:STATE_LINKED_PAUSED=3 --define:STATE_LINKED_STALE=4 | gzip -9 | wc -c) min+gzip bytes"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.22.0",
