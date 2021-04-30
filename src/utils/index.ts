@@ -1,5 +1,5 @@
 import { h, api } from '../dom';
-import { subscriber, subAdopt, subPause } from '../wire';
+import { sub, subAdopt, subPause } from '../wire';
 
 import type { WireSubscriber } from '../wire';
 
@@ -17,15 +17,15 @@ const svg = <T extends () => Node>(closure: T): ReturnType<T> => {
 
 /** Switches DOM content when signals in the given reactor are written to */
 const when = <T extends string>(
-  sub: WireSubscriber<T>,
+  subscriber: WireSubscriber<T>,
   views: { [k in T]?: Component }
 ): WireSubscriber<El | undefined> => {
   const renderedElements = {} as { [k in T]?: El };
   const renderedSubs = {} as { [k in T]?: WireSubscriber<void> };
   let condActive: T;
-  const { fn } = sub;
+  const { fn } = subscriber;
   // @ts-ignore It's not T anymore; the type has changed to `El | undefined`
-  sub.fn = function when($) {
+  subscriber.fn = function when($) {
     const cond = fn($);
     if (cond !== condActive && views[cond]) {
       // Tick. Pause reactors and keep DOM intact
@@ -37,9 +37,9 @@ const when = <T extends string>(
         (renderedSubs[cond] as WireSubscriber)();
       }
       // Able to render?
-      const sub = subscriber(() => {});
-      renderedElements[cond] = subAdopt(sub, () => h(views[cond] as Component));
-      renderedSubs[cond] = sub;
+      const _sub = sub(() => {});
+      renderedElements[cond] = subAdopt(_sub, () => h(views[cond] as Component));
+      renderedSubs[cond] = _sub;
     }
     return renderedElements[cond] as El | undefined;
   };

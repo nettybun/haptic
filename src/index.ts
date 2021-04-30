@@ -18,7 +18,7 @@
 
 import { h, api } from './dom';
 // TODO: Actually split the import sites. This is only for `npm run size:bundle`
-import { signalPackage, sub } from './wire';
+import { signalState, sub } from './wire';
 
 import type { WireSubscriber } from './wire';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
@@ -37,7 +37,7 @@ api.patch = (value, patchDOM) => {
   return $wR;
 };
 
-export { h, api, signalPackage, sub };
+export { h, api, signalState, sub };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DistributeSubscriberT<T> = T extends any ? WireSubscriber<T> : never;
