@@ -164,13 +164,15 @@ const subPause = (sub: WireSubscriber<X>) => {
  * hold a list of subscribed reactors. When any value is written reactors are
  * re-run. Writing a reactor to a signal creates a lazy computed-signal. Signals
  * are named by the key of the object entry and a global counter. */
-const signalState = <T>(obj: T): {
+const signalObject = <T>(obj: T): {
   [K in keyof T]: WireSignal<T[K] extends WireSubscriber<infer R> ? R : T[K]>;
 } => {
   Object.keys(obj).forEach((k) => {
     // @ts-ignore Mutation of T
     obj[k] = signal(obj[k as keyof T], k);
+    sigId--;
   });
+  sigId++;
   // @ts-ignore Mutation of T
   return obj;
 };
@@ -299,7 +301,7 @@ const subAdopt = <T>(sub: WireSubscriber<X>, fn: () => T): T => {
 
 export {
   signal,
-  signalState,
+  signalObject,
   sub,
   // None of these below contribute to bundle size
   subClear,
