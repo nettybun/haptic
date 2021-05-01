@@ -64,11 +64,11 @@ type WireSubscriberState =
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 type X = any;
 
-let sigId = 0;
-let subId = 0;
+let signalId = 0;
+let subscriberId = 0;
 
 // Currently running reactor
-let activeSub: WireSubscriber<X> | undefined;
+let activeSubscriber: WireSubscriber<X> | undefined;
 // WireSignals written to during a transaction(() => {...})
 let transactionSignals: Set<WireSignal<X>> | undefined;
 
@@ -94,7 +94,7 @@ const v$: SubToken = ((...signals) => signals.map((sig) => sig(v$)));
  * who read-subscribed will re-run the reactor when written to. Reactors are
  * named by their function's name and a counter. */
 const sub = <T>(fn: ($: SubToken) => T): WireSubscriber<T> => {
-  const id = `sub:${subId++}{${fn.name}}`;
+  const id = `subscriber:${subscriberId++}{${fn.name}}`;
   let saved: T;
   // @ts-ignore function properties are setup by reactorReset() below
   const _sub: WireSubscriber<T> = { [id]() {
@@ -104,7 +104,7 @@ const sub = <T>(fn: ($: SubToken) => T): WireSubscriber<T> => {
     // If STATE_PAUSED then STATE_STALE was never reached; nothing has changed.
     // Restore state (below) and call inner reactors so they can check
     if (_sub.state === STATE_LINKED_PAUSED) {
-      _sub.inner.forEach((subsub) => { subsub(); });
+      _sub.inner.forEach((__sub) => { __sub(); });
     } else {
       // Symmetrically remove all connections from wS/wR. Called "automatic
       // memory management" in Sinuous/S.js
@@ -121,12 +121,12 @@ const sub = <T>(fn: ($: SubToken) => T): WireSubscriber<T> => {
   _sub.$wR = 1;
   _sub.fn = fn;
   _sub.runs = 0;
-  _sub.sort = activeSub ? activeSub.sort + 1 : 0;
+  _sub.sort = activeSubscriber ? activeSubscriber.sort + 1 : 0;
   // @ts-ignore
-  const $: SubToken = ((...wS) => wS.map((sig) => sig($)));
+  const $: SubToken = ((...wS) => wS.map((_signal) => _signal($)));
   $.$$ = 1;
   $.wR = _sub;
-  if (activeSub) activeSub.inner.add(_sub);
+  if (activeSubscriber) activeSubscriber.inner.add(_sub);
   subInit(_sub);
   return _sub;
 };
@@ -143,20 +143,20 @@ const subInit = (sub: WireSubscriber<X>): void => {
 /**
  * Removes two-way subscriptions between its signals and itself. This also turns
  * off the reactor until it is manually re-run. */
-const subClear = (sub: WireSubscriber<X>): void => {
-  const unlinkFromSignal = (signal: WireSignal<X>) => signal.rS.delete(sub);
-  sub.inner.forEach(subClear);
-  sub.sS.forEach(unlinkFromSignal);
-  sub.sC.forEach(unlinkFromSignal);
-  subInit(sub);
+const subClear = (_sub: WireSubscriber<X>): void => {
+  const unlinkFromSignal = (signal: WireSignal<X>) => signal.rS.delete(_sub);
+  _sub.inner.forEach(subClear);
+  _sub.sS.forEach(unlinkFromSignal);
+  _sub.sC.forEach(unlinkFromSignal);
+  subInit(_sub);
 };
 
 /**
  * Pauses a reactor. Trying to run the reactor again will unpause; if no signals
  * were written during the pause then the run is skipped. */
-const subPause = (sub: WireSubscriber<X>) => {
-  sub.state = STATE_LINKED_PAUSED;
-  sub.inner.forEach(subPause);
+const subPause = (_sub: WireSubscriber<X>) => {
+  _sub.state = STATE_LINKED_PAUSED;
+  _sub.inner.forEach(subPause);
 };
 
 /**
@@ -170,9 +170,9 @@ const signalObject = <T>(obj: T): {
   Object.keys(obj).forEach((k) => {
     // @ts-ignore Mutation of T
     obj[k] = signal(obj[k as keyof T], k);
-    sigId--;
+    signalId--;
   });
-  sigId++;
+  signalId++;
   // @ts-ignore Mutation of T
   return obj;
 };
@@ -181,15 +181,15 @@ const signal = <T>(value: T, id?: string): WireSignal<T> => {
   type R = WireSubscriber<X>;
   let saved: unknown;
   // Multi-use temp variable
-  let read: unknown = `sig:${sigId++}{${id as string}`;
+  let read: unknown = `signal:${signalId++}{${id as string}`;
   const _signal = { [read as string](...args: unknown[]) {
     // Case: Read-Pass
     if ((read = !args.length)) {
-      if (activeSub) {
-        if (activeSub.sS.has(_signal)) {
+      if (activeSubscriber) {
+        if (activeSubscriber.sS.has(_signal)) {
           throw new Error(`Mixed sS|sP ${_signal.name}`);
         }
-        activeSub.sP.add(_signal);
+        activeSubscriber.sP.add(_signal);
       }
     }
     // Case: Void token
@@ -235,8 +235,8 @@ const signal = <T>(value: T, id?: string): WireSignal<T> => {
       // infinitely. Depth ordering needs an array while Sinuous uses a Set()
       const toRun = [..._signal.rS].sort((a, b) => a.sort - b.sort);
       // Mark upstream computeds as stale. Must be in an isolated for-loop
-      toRun.forEach((sub) => {
-        if (sub.state === STATE_LINKED_PAUSED || sub.cS) sub.state = STATE_LINKED_STALE;
+      toRun.forEach((_sub) => {
+        if (_sub.state === STATE_LINKED_PAUSED || _sub.cS) _sub.state = STATE_LINKED_STALE;
       });
       // Calls are ordered parent->child
       toRun.forEach((wR) => {
@@ -273,9 +273,9 @@ const transaction = <T>(fn: () => T): T => {
   const signals = transactionSignals;
   transactionSignals = prev;
   if (error) throw error;
-  signals.forEach((sig) => {
-    sig(sig.tV);
-    delete sig.tV;
+  signals.forEach((_signal) => {
+    _signal(_signal.tV);
+    delete _signal.tV;
   });
   return ret as T;
 };
@@ -284,9 +284,9 @@ const transaction = <T>(fn: () => T): T => {
  * Run a function with a reactor set as the active listener. Nested children
  * reactors are adopted (see wR.sort and wR.inner). This also affects signal
  * read consistent checks for read-pass (sP) and read-subscribe (sS). */
-const subAdopt = <T>(sub: WireSubscriber<X>, fn: () => T): T => {
-  const prev = activeSub;
-  activeSub = sub;
+const subAdopt = <T>(_sub: WireSubscriber<X>, fn: () => T): T => {
+  const prev = activeSubscriber;
+  activeSubscriber = _sub;
   let error: unknown;
   let ret: unknown;
   try {
@@ -294,7 +294,7 @@ const subAdopt = <T>(sub: WireSubscriber<X>, fn: () => T): T => {
   } catch (err) {
     error = err;
   }
-  activeSub = prev;
+  activeSubscriber = prev;
   if (error) throw error;
   return ret as T;
 };
