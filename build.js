@@ -2,6 +2,9 @@ import esbuild from 'esbuild';
 import { gzip } from 'fflate';
 import { readFile, writeFile } from 'fs/promises';
 
+// This is explained in ./src/index.ts. Haptic's bundle entrypoint isn't a self
+// contained bundle. This is to support unbundled developement workflows that
+// are ESM-only. For production, your bundler can re-bundle it.
 const externalPlugin = {
   name: 'external',
   setup(build) {
