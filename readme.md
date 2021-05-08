@@ -14,7 +14,7 @@ developers who are trying to learn.
 
 There's minimum hidden complexity in Haptic. It's ~500 lines of source code; 220
 of which is the single-file reactivity engine called haptic/w. Reactivity is
-wired into a page explicitly by subscribing signals and reactors. This is then
+wired into a page explicitly by subscribing signals and cores. This is then
 debuggable at runtime with proper naming and lookups.
 
 Its first goal is to setup non-developers (i.e partners/friends) on the path to

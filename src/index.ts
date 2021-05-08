@@ -2,7 +2,7 @@
 // You access haptic/wire on its own:
 
 // import { h } from 'haptic';
-// import { wireSignals, wireReactor } from 'haptic/wire';
+// import { signalsFrom, core } from 'haptic/wire';
 
 // The 'haptic' package doesn't embed haptic/wire in the bundle, so code is only
 // loaded once despite having two import sites. This should work well for both
@@ -10,17 +10,17 @@
 // only run one instance of haptic/wire because reactivity depends on accessing
 // some shared global state that is setup during import.
 
-// This bundle also extends the JSX namespace to allow using WireReactors. Use
-// haptic/dom directly to use a vanilla JSX namespace or to extend it for other
-// reactive libraries such as sinuous/observable, haptic/s, hyperactiv, etc.
+// This bundle also extends the JSX namespace to allow using WireCore functions.
+// Use haptic/dom directly to use a vanilla JSX namespace or to extend it for
+// other reactive libraries; sinuous/observable, haptic/s, hyperactiv, etc.
 
-// Utilities functions svg() and when() are available in haptic/extras.
+// Utilities functions svg() and when() are available in haptic/utils.
 
 import { h, api } from './dom';
 // TODO: Actually split the import sites. This is only for `npm run size:bundle`
-import { signalObject, sub } from './wire';
+import { signalsFrom, core } from './wire';
 
-import type { WireSubscriber } from './wire';
+import type { WireCore } from './wire';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
 // Swap out h to have the correct JSX namespace; commit #d7cd2819
@@ -29,23 +29,23 @@ import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements 
 api.patch = (value, patchDOM) => {
   // @ts-ignore
   const $wR = (value && value.$wR) as boolean;
-  const { fn } = value as WireSubscriber;
+  const { fn } = value as WireCore;
   if ($wR && patchDOM) {
-    (value as WireSubscriber).fn = ($) => patchDOM(fn($));
-    (value as WireSubscriber)();
+    (value as WireCore).fn = ($) => patchDOM(fn($));
+    (value as WireCore)();
   }
   return $wR;
 };
 
-export { h, api, signalObject, sub };
+export { h, api, signalsFrom, core };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DistributeSubscriberT<T> = T extends any ? WireSubscriber<T> : never;
+type DistributeCoreT<T> = T extends any ? WireCore<T> : never;
 
 declare namespace h {
   export namespace JSX {
-    type MaybeSub<T> = T | DistributeSubscriberT<T>;
-    type AllowSubForProperties<T> = { [K in keyof T]: MaybeSub<T[K]> };
+    type MaybeCore<T> = T | DistributeCoreT<T>;
+    type AllowCoreForProperties<T> = { [K in keyof T]: MaybeCore<T[K]> };
 
     type Element = HTMLElement | SVGElement | DocumentFragment;
 
@@ -61,15 +61,15 @@ declare namespace h {
       = GenericEventAttrs<Target> & { children?: unknown };
 
     type HTMLAttributes<Target extends EventTarget>
-      = AllowSubForProperties<Omit<HTMLAttrs, 'style'>>
+      = AllowCoreForProperties<Omit<HTMLAttrs, 'style'>>
         & { style?:
-            | MaybeSub<string>
-            | { [key: string]: MaybeSub<string | number> };
+            | MaybeCore<string>
+            | { [key: string]: MaybeCore<string | number> };
           }
         & DOMAttributes<Target>;
 
     type SVGAttributes<Target extends EventTarget>
-      = AllowSubForProperties<SVGAttrs> & HTMLAttributes<Target>;
+      = AllowCoreForProperties<SVGAttrs> & HTMLAttributes<Target>;
 
     type IntrinsicElements =
       & { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>; }

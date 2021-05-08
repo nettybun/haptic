@@ -35,7 +35,7 @@ esbuild.build({
   metafile: true,
   // About 100 characters saved this way
   define: {
-    STATE_CLEARED: 0,
+    STATE_RESET: 0,
     STATE_RUNNING: 1,
     STATE_LINKED_WAITING: 2,
     STATE_LINKED_PAUSED: 3,

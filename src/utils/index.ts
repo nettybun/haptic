@@ -1,7 +1,7 @@
 import { h, api } from '../dom';
-import { sub, subAdopt, subPause } from '../wire';
+import { core, coreAdopt, corePause } from '../wire';
 
-import type { WireSubscriber } from '../wire';
+import type { WireCore } from '../wire';
 
 type El = Element | Node | DocumentFragment;
 type Component = (...args: unknown[]) => El;
@@ -15,35 +15,35 @@ const svg = <T extends () => Node>(closure: T): ReturnType<T> => {
   return el as ReturnType<T>;
 };
 
-/** Switches DOM content when signals in the given reactor are written to */
+/** Switches DOM content when signals in the given core are written to */
 const when = <T extends string>(
-  subscriber: WireSubscriber<T>,
+  wC: WireCore<T>,
   views: { [k in T]?: Component }
-): WireSubscriber<El | undefined> => {
-  const renderedElements = {} as { [k in T]?: El };
-  const renderedSubs = {} as { [k in T]?: WireSubscriber<void> };
+): WireCore<El | undefined> => {
+  const liveElements = {} as { [k in T]?: El };
+  const liveCores = {} as { [k in T]?: WireCore<void> };
   let condActive: T;
-  const { fn } = subscriber;
+  const { fn } = wC;
   // @ts-ignore It's not T anymore; the type has changed to `El | undefined`
-  subscriber.fn = function when($) {
+  wC.fn = function when($) {
     const cond = fn($);
     if (cond !== condActive && views[cond]) {
-      // Tick. Pause reactors and keep DOM intact
-      if (condActive) subPause(renderedSubs[condActive] as WireSubscriber);
+      // Tick. Pause cores and keep DOM intact
+      if (condActive) corePause(liveCores[condActive] as WireCore);
       condActive = cond;
-      // Rendered?
-      if (renderedElements[cond]) {
-        // Then unpause. If nothing has changed then no sub.rS/sub.rP links change
-        (renderedSubs[cond] as WireSubscriber)();
+      // Rendered/Live?
+      if (liveElements[cond]) {
+        // Then unpause. If nothing changed then no core.sS/core.sP links change
+        (liveCores[cond] as WireCore)();
       }
       // Able to render?
-      const _sub = sub(() => {});
-      renderedElements[cond] = subAdopt(_sub, () => h(views[cond] as Component));
-      renderedSubs[cond] = _sub;
+      const wCNew = core(() => {});
+      liveElements[cond] = coreAdopt(wCNew, () => h(views[cond] as Component));
+      liveCores[cond] = wCNew;
     }
-    return renderedElements[cond] as El | undefined;
+    return liveElements[cond] as El | undefined;
   };
-  return sub as unknown as WireSubscriber<El | undefined>;
+  return wC as unknown as WireCore<El | undefined>;
 };
 
 export { when, svg };
