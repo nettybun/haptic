@@ -71,6 +71,7 @@ let signalId = 0;
 let activeCore: WireCore<X> | undefined;
 // WireSignals written to during a transaction
 let transactionSignals: Set<WireSignal<X>> | undefined;
+let transactionCommit = false;
 
 // Symbol() doesn't gzip well. `[] as const` gzips best but isn't debuggable
 // without a lookup Map<> and other hacks.
@@ -138,6 +139,22 @@ const _initCore = (wC: WireCore<X>): void => {
   wC.signalsRS = new Set();
   wC.signalsRP = new Set();
   wC.signalsIC = new Set();
+};
+
+const _runCores = (cores: Set<WireCore<X>>): void => {
+  // Copy the cores since the Set() can be added to while running which loops
+  // infinitely. Depth ordering needs an array but in Sinuous they use a Set()
+  const toRun = [...cores].sort((a, b) => a.sort - b.sort);
+  // Mark upstream computeds as stale. Must be in an isolated for-loop
+  toRun.forEach((wC) => {
+    if (wC.state === STATE_WIRED_PAUSED || wC.cS) wC.state = STATE_WIRED_STALE;
+  });
+  // Calls are ordered parent->child
+  toRun.forEach((wC) => {
+    // RESET|RUNNING|WAITING < PAUSED|STALE. Skips paused cores and lazy
+    // computed-signals. RESET cores shouldn't exist...
+    if (wC.state < STATE_WIRED_PAUSED) wC();
+  });
 };
 
 /**
@@ -213,19 +230,8 @@ const signal = <T>(value: T, id?: string): WireSignal<T> => {
         (saved as R).state = STATE_WIRED_STALE;
         wS.cC = saved as R;
       }
-      // Notify. Copy wS.cores since the Set() can grow while running and loop
-      // infinitely. Depth ordering needs an array while Sinuous uses a Set()
-      const toRun = [...wS.cores].sort((a, b) => a.sort - b.sort);
-      // Mark upstream computeds as stale. Must be in an isolated for-loop
-      toRun.forEach((wC) => {
-        if (wC.state === STATE_WIRED_PAUSED || wC.cS) wC.state = STATE_WIRED_STALE;
-      });
-      // Calls are ordered parent->child
-      toRun.forEach((wC) => {
-        // RESET|RUNNING|WAITING < PAUSED|STALE. Skips paused cores and lazy
-        // computed-signals. RESET cores shouldn't exist...
-        if (wC.state < STATE_WIRED_PAUSED) wC();
-      });
+      // Notify every write _unless_ this is a post-transaction commit
+      if (!transactionCommit) _runCores(wS.cores);
     }
     if (read) {
       // Re-run the core to get a new value if needed
@@ -268,16 +274,24 @@ const transaction = <T>(fn: () => T): T => {
   let ret: unknown;
   try {
     ret = fn();
+    const signals = transactionSignals;
+    transactionSignals = prev;
+    const transactionCores = new Set<WireCore<X>>();
+    transactionCommit = true;
+    signals.forEach((wS) => {
+      // Doesn't run any subscribed cores since `transactionCommit` is set
+      wS(wS.next);
+      delete wS.next;
+      wS.cores.forEach((wC) => transactionCores.add(wC));
+    });
+    transactionCommit = false;
+    _runCores(transactionCores);
   } catch (err) {
     error = err;
   }
-  const signals = transactionSignals;
+  // Yes this happens a few lines up; do it again in case the `try` throws
   transactionSignals = prev;
   if (error) throw error;
-  signals.forEach((wS) => {
-    wS(wS.next);
-    delete wS.next;
-  });
   return ret as T;
 };
 
