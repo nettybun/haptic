@@ -36,10 +36,10 @@ const when = <T extends string>(
         // Then unpause. If nothing changed then no core.sS/core.sP links change
         (liveCores[cond] as WireCore)();
       }
-      // Able to render?
-      const wCNew = core(() => {});
-      liveElements[cond] = coreAdopt(wCNew, () => h(views[cond] as Component));
-      liveCores[cond] = wCNew;
+      // Able to render this DOM tree?
+      const coreForTree = core(() => {});
+      liveElements[cond] = coreAdopt(coreForTree, () => h(views[cond] as Component));
+      liveCores[cond] = coreForTree;
     }
     return liveElements[cond] as El | undefined;
   };

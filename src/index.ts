@@ -28,13 +28,13 @@ import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements 
 
 api.patch = (value, patchDOM) => {
   // @ts-ignore
-  const $wR = (value && value.$wR) as boolean;
+  const $wC = (value && value.$wC) as boolean;
   const { fn } = value as WireCore;
-  if ($wR && patchDOM) {
+  if ($wC && patchDOM) {
     (value as WireCore).fn = ($) => patchDOM(fn($));
     (value as WireCore)();
   }
-  return $wR;
+  return $wC;
 };
 
 export { h, api, signalsFrom, core };

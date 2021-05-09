@@ -6,19 +6,19 @@ type WireCore<T = unknown> = {
   /** User-provided function to run */
   fn: ($: SubToken) => T;
   /** Signals that were read-subscribed last run */
-  sS: Set<WireSignal<X>>;
+  signalsRS: Set<WireSignal<X>>;
   /** Signals that were read-passed last run */
-  sP: Set<WireSignal<X>>;
-  /** Signals that were given by computed-signals last run */
-  sC: Set<WireSignal<X>>;
-  /** Other cores created during this run (children of this parent) */
+  signalsRP: Set<WireSignal<X>>;
+  /** Signals that were inherited from computed-signals last run */
+  signalsIC: Set<WireSignal<X>>;
+  /** Cores created during this run (children of this parent) */
   inner: Set<WireCore<X>>;
   /** FSM state: RESET|RUNNING|WAITING|PAUSED|STALE */
   state: CoreStates;
   /** Number of parent cores (see wR.inner); to sort core runs */
   sort: number;
   /** Run count */
-  runs: number;
+  run: number;
   /** If part of a computed signal, this is its signal */
   cS?: WireSignal<T>;
   /** To check "if x is a core" */
@@ -33,9 +33,9 @@ type WireSignal<T = unknown> = {
   /** Read value & subscribe */
   ($: SubToken): T;
   /** Cores subscribed to this signal */
-  rS: Set<WireCore<X>>;
+  cores: Set<WireCore<X>>;
   /** Transaction value; set and deleted on commit */
-  tV?: T;
+  next?: T;
   /** If this is a computed-signal, this is its core */
   cC?: WireCore<T>;
   /** To check "if x is a signal" */
@@ -56,9 +56,9 @@ type SubToken = {
 type CoreStates =
   | typeof STATE_RESET
   | typeof STATE_RUNNING
-  | typeof STATE_LINKED_WAITING
-  | typeof STATE_LINKED_PAUSED
-  | typeof STATE_LINKED_STALE;
+  | typeof STATE_WIRED_WAITING
+  | typeof STATE_WIRED_PAUSED
+  | typeof STATE_WIRED_STALE;
 
 /* eslint-disable no-multi-spaces */
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
@@ -69,16 +69,16 @@ let signalId = 0;
 
 // Currently running core
 let activeCore: WireCore<X> | undefined;
-// WireSignals written to during a transaction(() => {...})
+// WireSignals written to during a transaction
 let transactionSignals: Set<WireSignal<X>> | undefined;
 
 // Symbol() doesn't gzip well. `[] as const` gzips best but isn't debuggable
 // without a lookup Map<> and other hacks.
-declare const STATE_RESET          = 0;
-declare const STATE_RUNNING        = 1;
-declare const STATE_LINKED_WAITING = 2;
-declare const STATE_LINKED_PAUSED  = 3;
-declare const STATE_LINKED_STALE   = 4;
+declare const STATE_RESET         = 0;
+declare const STATE_RUNNING       = 1;
+declare const STATE_WIRED_WAITING = 2;
+declare const STATE_WIRED_PAUSED  = 3;
+declare const STATE_WIRED_STALE   = 4;
 
 /**
  * Void subcription token. Used when a function demands a token but you don't
@@ -94,7 +94,7 @@ const v$: SubToken = ((...signals) => signals.map((sig) => sig(v$)));
  * read-subscribed during its run will re-run the core when they're written to.
  * Cores are named by their function's name and a counter. */
 const core = <T>(fn: ($: SubToken) => T): WireCore<T> => {
-  const id = `core:${coreId++}{${fn.name}}`;
+  const id = `wC:${coreId++}{${fn.name}}`;
   let saved: T;
   // @ts-ignore function properties are setup by coreReset() below
   const wC: WireCore<T> = { [id]() {
@@ -103,7 +103,7 @@ const core = <T>(fn: ($: SubToken) => T): WireCore<T> => {
     }
     // If STATE_PAUSED then STATE_STALE was never reached; nothing has changed.
     // Restore state (below) and call inner cores so they can check
-    if (wC.state === STATE_LINKED_PAUSED) {
+    if (wC.state === STATE_WIRED_PAUSED) {
       wC.inner.forEach((_wC) => { _wC(); });
     } else {
       // Symmetrically remove all connections from wS/wR. Called "automatic
@@ -111,51 +111,51 @@ const core = <T>(fn: ($: SubToken) => T): WireCore<T> => {
       coreReset(wC);
       wC.state = STATE_RUNNING;
       saved = coreAdopt(wC, () => wC.fn($));
-      wC.runs++;
+      wC.run++;
     }
-    wC.state = wC.sS.size
-      ? STATE_LINKED_WAITING
+    wC.state = wC.signalsRS.size
+      ? STATE_WIRED_WAITING
       : STATE_RESET;
     return saved;
   } }[id];
   wC.$wC = 1;
   wC.fn = fn;
-  wC.runs = 0;
+  wC.run = 0;
   wC.sort = activeCore ? activeCore.sort + 1 : 0;
   // @ts-ignore
-  const $: SubToken = ((...wS) => wS.map((_signal) => _signal($)));
+  const $: SubToken = ((...wS) => wS.map((_wS) => _wS($)));
   $.$$ = 1;
   $.wC = wC;
   if (activeCore) activeCore.inner.add(wC);
-  coreInit(wC);
+  _initCore(wC);
   return wC;
 };
 
-const coreInit = (wC: WireCore<X>): void => {
+const _initCore = (wC: WireCore<X>): void => {
   wC.state = STATE_RESET;
   wC.inner = new Set();
   // Drop all signals now that they have been unlinked
-  wC.sS = new Set();
-  wC.sP = new Set();
-  wC.sC = new Set();
+  wC.signalsRS = new Set();
+  wC.signalsRP = new Set();
+  wC.signalsIC = new Set();
 };
 
 /**
  * Removes two-way subscriptions between its signals and itself. This also turns
  * off the core until it is manually re-run. */
 const coreReset = (wC: WireCore<X>): void => {
-  const unlinkFromSignal = (signal: WireSignal<X>) => signal.rS.delete(wC);
+  const unlinkFromSignal = (signal: WireSignal<X>) => signal.cores.delete(wC);
   wC.inner.forEach(coreReset);
-  wC.sS.forEach(unlinkFromSignal);
-  wC.sC.forEach(unlinkFromSignal);
-  coreInit(wC);
+  wC.signalsRS.forEach(unlinkFromSignal);
+  wC.signalsIC.forEach(unlinkFromSignal);
+  _initCore(wC);
 };
 
 /**
  * Pauses a core. Trying to run the core again will unpause; if no signals
  * were written during the pause then the run is skipped. */
 const corePause = (wC: WireCore<X>) => {
-  wC.state = STATE_LINKED_PAUSED;
+  wC.state = STATE_WIRED_PAUSED;
   wC.inner.forEach(corePause);
 };
 
@@ -163,15 +163,15 @@ const signal = <T>(value: T, id?: string): WireSignal<T> => {
   type R = WireCore<X>;
   let saved: unknown;
   // Multi-use temp variable
-  let read: unknown = `signal:${signalId++}{${id as string}`;
+  let read: unknown = `wS:${signalId++}{${id as string}`;
   const wS = { [read as string](...args: unknown[]) {
     // Case: Read-Pass
     if ((read = !args.length)) {
       if (activeCore) {
-        if (activeCore.sS.has(wS)) {
-          throw new Error(`Mixed sS|sP ${wS.name}`);
+        if (activeCore.signalsRS.has(wS)) {
+          throw new Error(`Mixed rs|rp ${wS.name}`);
         }
-        activeCore.sP.add(wS);
+        activeCore.signalsRP.add(wS);
       }
     }
     // Case: Void token
@@ -180,16 +180,16 @@ const signal = <T>(value: T, id?: string): WireSignal<T> => {
     // Case: Read-Subscribe
     // @ts-ignore
     else if ((read = args[0] && args[0].$$ && args[0].wR)) {
-      if ((read as R).sP.has(wS)) {
-        throw new Error(`Mixed sP|sS ${wS.name}`);
+      if ((read as R).signalsRP.has(wS)) {
+        throw new Error(`Mixed rp|rs ${wS.name}`);
       }
-      (read as R).sS.add(wS);
-      wS.rS.add((read as R));
+      (read as R).signalsRS.add(wS);
+      wS.cores.add((read as R));
       // Subscribing to a computed-signal also links cR's subscribed signals
-      wS.cC && wS.cC.sS.forEach((s) => {
-        // Link to sC not sS. This way the "Mixed A/B" errors keep working
-        (read as R).sC.add(s);
-        s.rS.add((read as R));
+      wS.cC && wS.cC.signalsRS.forEach((s) => {
+        // Link to sC not sS. This way the "Mixed A|B" errors keep working
+        (read as R).signalsIC.add(s);
+        s.cores.add((read as R));
       });
     }
     // Case: Write
@@ -197,7 +197,7 @@ const signal = <T>(value: T, id?: string): WireSignal<T> => {
       // If in a transaction; defer saving the value
       if (transactionSignals) {
         transactionSignals.add(wS);
-        wS.tV = args[0] as T;
+        wS.next = args[0] as T;
         return;
       }
       // If overwriting a computed-signal core, unsubscribe the core
@@ -208,33 +208,33 @@ const signal = <T>(value: T, id?: string): WireSignal<T> => {
       }
       saved = args[0] as T;
       // @ts-ignore If writing a core, this signal becomes as a computed-signal
-      if (saved && saved.$wR) {
+      if (saved && saved.$wC) {
         (saved as R).cS = wS;
-        (saved as R).state = STATE_LINKED_STALE;
+        (saved as R).state = STATE_WIRED_STALE;
         wS.cC = saved as R;
       }
-      // Notify. Copy wS.rS since the Set() can grow while running and loop
+      // Notify. Copy wS.cores since the Set() can grow while running and loop
       // infinitely. Depth ordering needs an array while Sinuous uses a Set()
-      const toRun = [...wS.rS].sort((a, b) => a.sort - b.sort);
+      const toRun = [...wS.cores].sort((a, b) => a.sort - b.sort);
       // Mark upstream computeds as stale. Must be in an isolated for-loop
       toRun.forEach((wC) => {
-        if (wC.state === STATE_LINKED_PAUSED || wC.cS) wC.state = STATE_LINKED_STALE;
+        if (wC.state === STATE_WIRED_PAUSED || wC.cS) wC.state = STATE_WIRED_STALE;
       });
       // Calls are ordered parent->child
       toRun.forEach((wC) => {
         // RESET|RUNNING|WAITING < PAUSED|STALE. Skips paused cores and lazy
         // computed-signals. RESET cores shouldn't exist...
-        if (wC.state < STATE_LINKED_PAUSED) wC();
+        if (wC.state < STATE_WIRED_PAUSED) wC();
       });
     }
     if (read) {
       // Re-run the core to get a new value if needed
-      if (wS.cC && wS.cC.state === STATE_LINKED_STALE) saved = wS.cC();
+      if (wS.cC && wS.cC.state === STATE_WIRED_STALE) saved = wS.cC();
       return saved;
     }
   } }[read as string] as WireSignal<T>;
   wS.$wS = 1;
-  wS.rS = new Set<WireCore<X>>();
+  wS.cores = new Set<WireCore<X>>();
   // Call it to run the "Case: Write" and de|initialize computed-signals
   wS(value);
   return wS;
@@ -275,16 +275,16 @@ const transaction = <T>(fn: () => T): T => {
   transactionSignals = prev;
   if (error) throw error;
   signals.forEach((wS) => {
-    wS(wS.tV);
-    delete wS.tV;
+    wS(wS.next);
+    delete wS.next;
   });
   return ret as T;
 };
 
 /**
  * Run a function with a core set as the active listener. Nested children cores
- * are adopted (see wR.sort and wR.inner). This also affects signal read
- * consistent checks for read-pass (sP) and read-subscribe (sS). */
+ * are adopted (see wR.sort and wR.inner). Also affects signal read consistency
+ * checks for read-pass (wS.signalsRP) and read-subscribe (wS.signalsRS). */
 const coreAdopt = <T>(wC: WireCore<X>, fn: () => T): T => {
   const prev = activeCore;
   activeCore = wC;

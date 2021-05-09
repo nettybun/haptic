@@ -37,9 +37,9 @@ esbuild.build({
   define: {
     STATE_RESET: 0,
     STATE_RUNNING: 1,
-    STATE_LINKED_WAITING: 2,
-    STATE_LINKED_PAUSED: 3,
-    STATE_LINKED_STALE: 4,
+    STATE_WIRED_WAITING: 2,
+    STATE_WIRED_PAUSED: 3,
+    STATE_WIRED_STALE: 4,
   },
 })
   .then((build) => Promise.all(
