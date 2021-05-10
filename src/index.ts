@@ -17,8 +17,6 @@
 // Utilities functions svg() and when() are available in haptic/utils.
 
 import { h, api } from './dom';
-// TODO: Actually split the import sites. This is only for `npm run size:bundle`
-import { signalsFrom, core } from './wire';
 
 import type { WireCore } from './wire';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
@@ -37,7 +35,7 @@ api.patch = (value, patchDOM) => {
   return $wC;
 };
 
-export { h, api, signalsFrom, core };
+export { h, api };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DistributeCoreT<T> = T extends any ? WireCore<T> : never;
