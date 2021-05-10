@@ -79,8 +79,8 @@ esbuild.build({
 // CommonJS for older Node and require()
 esbuild.build({
   entryPoints,
-  entryNames: '[dir]/[name]-cjs',
   outdir: 'publish',
+  outExtension: { '.js': '.cjs' },
   plugins: [
     externalPlugin,
   ],

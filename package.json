@@ -10,19 +10,19 @@
   "exports": {
     ".": {
       "import": "./publish/index.js",
-      "require": "./publish/index-cjs.js"
+      "require": "./publish/index.cjs"
     },
     "./dom": {
       "import": "./publish/dom/index.js",
-      "require": "./publish/dom/index-cjs.js"
+      "require": "./publish/dom/index.cjs"
     },
     "./wire": {
       "import": "./publish/wire/index.js",
-      "require": "./publish/wire/index-cjs.js"
+      "require": "./publish/wire/index.cjs"
     },
     "./utils": {
       "import": "./publish/utils/index.js",
-      "require": "./publish/utils/index-cjs.js"
+      "require": "./publish/utils/index.cjs"
     }
   },
   "keywords": [
