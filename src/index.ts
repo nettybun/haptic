@@ -2,7 +2,7 @@
 // You access haptic/wire on its own:
 
 // import { h } from 'haptic';
-// import { signalsFrom, core } from 'haptic/wire';
+// import { signal, core } from 'haptic/wire';
 
 // The 'haptic' package doesn't embed haptic/wire in the bundle, so code is only
 // loaded once despite having two import sites. This should work well for both

@@ -36,10 +36,10 @@ Usage:
 
 ```tsx
 import { h } from 'haptic';
-import { signalsFrom, core } from 'haptic/wire';
+import { signal, core } from 'haptic/wire';
 import { when } from 'haptic/utils';
 
-const data = signalsFrom({
+const data = signal.object({
   count: 0,
 });
 
