@@ -1,15 +1,40 @@
 {
   "name": "haptic",
   "version": "0.8.0",
-  "description": "Straightforward reactive web rendering in TSX",
+  "description": "Explicit reactive web rendering in TSX",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.d.ts",
   "license": "MIT",
   "author": "Gen Hames",
+  "exports": {
+    ".": {
+      "import": "./publish/index.js",
+      "require": "./publish/index-cjs.js"
+    },
+    "./dom": {
+      "import": "./publish/dom/index.js",
+      "require": "./publish/dom/index-cjs.js"
+    },
+    "./wire": {
+      "import": "./publish/wire/index.js",
+      "require": "./publish/wire/index-cjs.js"
+    },
+    "./utils": {
+      "import": "./publish/utils/index.js",
+      "require": "./publish/utils/index-cjs.js"
+    }
+  },
+  "keywords": [
+    "reactive",
+    "dom",
+    "tsx",
+    "frontend",
+    "framework"
+  ],
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/nthm/haptic"
+    "url": "https://github.com/heyheyhello/haptic"
   },
   "scripts": {
     "build": "node build.js",
