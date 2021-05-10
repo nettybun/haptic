@@ -251,7 +251,7 @@ const signal = <T>(value: T, id?: string): WireSignal<T> => {
  * hold a list of subscribed cores. When a value is written those cores are
  * re-run. Writing a core into a signal creates a lazy computed-signal. Signals
  * are named by the key of the object entry and a global counter. */
-const signalsFrom = <T>(obj: T): {
+signal.object = <T>(obj: T): {
   [K in keyof T]: WireSignal<T[K] extends WireCore<infer R> ? R : T[K]>;
 } => {
   Object.keys(obj).forEach((k) => {
@@ -316,7 +316,6 @@ const coreAdopt = <T>(wC: WireCore<X>, fn: () => T): T => {
 
 export {
   signal,
-  signalsFrom,
   core,
   coreReset,
   corePause,
