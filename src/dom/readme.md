@@ -1,12 +1,12 @@
 Hyperscript reviver for JSX in Haptic.
 
-This is a fork of Sinuous' "h" package that has been ported to TypeScript,
+This is a fork of the Sinuous "h" package that has been ported to TypeScript,
 simplified in a few places, and adapted to support a general [`api.patch()`][1]
 method for reactive libraries. This package isn't tied to [Haptic Wire][2] and
 can be used with any reactive library such as Sinuous, MobX, Hyperactiv, and
 other friends. It can also be used without reactivity at all.
 
-It's 940 bytes min+gzip on its own.
+It's 920 bytes min+gzip on its own.
 
 Designed to be explicit, type safe, and interoperable with the Sinuous
 ecosystem. The Sinuous repository lists some [community packages][3].
