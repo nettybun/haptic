@@ -97,7 +97,7 @@ const v$: SubToken = ((...signals) => signals.map((sig) => sig(v$)));
 const core = <T>(fn: ($: SubToken) => T): WireCore<T> => {
   const id = `wC:${coreId++}{${fn.name}}`;
   let saved: T;
-  // @ts-ignore function properties are setup by coreReset() below
+  // @ts-ignore Missing properties right now but they're set in _initCore()
   const wC: WireCore<T> = { [id]() {
     if (wC.state === STATE_RUNNING) {
       throw new Error(`Loop ${wC.name}`);
@@ -181,7 +181,7 @@ const signal = <T>(value: T, id?: string): WireSignal<T> => {
   let saved: unknown;
   // Multi-use temp variable
   let read: unknown = `wS:${signalId++}{${id as string}`;
-  const wS = { [read as string](...args: unknown[]) {
+  const wS = { [read as string](...args: [$?: SubToken, ...unused: unknown[]]) {
     // Case: Read-Pass
     if ((read = !args.length)) {
       if (activeCore) {
@@ -192,11 +192,9 @@ const signal = <T>(value: T, id?: string): WireSignal<T> => {
       }
     }
     // Case: Void token
-    // eslint-disable-next-line no-empty
     else if ((read = args[0] === v$)) {}
     // Case: Read-Subscribe
-    // @ts-ignore
-    else if ((read = args[0] && args[0].$$ && args[0].wR)) {
+    else if ((read = args[0] && (args[0] as { $$?: 1 }).$$ && args[0].wC)) {
       if ((read as R).signalsRP.has(wS)) {
         throw new Error(`Mixed rp|rs ${wS.name}`);
       }
@@ -214,7 +212,7 @@ const signal = <T>(value: T, id?: string): WireSignal<T> => {
       // If in a transaction; defer saving the value
       if (transactionSignals) {
         transactionSignals.add(wS);
-        wS.next = args[0] as T;
+        wS.next = args[0] as unknown as T;
         return;
       }
       // If overwriting a computed-signal core, unsubscribe the core
@@ -223,9 +221,9 @@ const signal = <T>(value: T, id?: string): WireSignal<T> => {
         delete wS.cC.cS; // Part of unsubscribing/cleaning the core
         delete wS.cC;
       }
-      saved = args[0] as T;
-      // @ts-ignore If writing a core, this signal becomes as a computed-signal
-      if (saved && saved.$wC) {
+      saved = args[0] as unknown as T;
+      // If writing a core, this signal becomes as a computed-signal
+      if (saved && (saved as { $wC?: 1 }).$wC) {
         (saved as R).cS = wS;
         (saved as R).state = STATE_WIRED_STALE;
         wS.cC = saved as R;
