@@ -42,7 +42,6 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
   }
   else if (api.patch(value, (v: unknown) => {
     current = api.insert(el, v, endMark, current, startNode);
-  // eslint-disable-next-line no-empty
   }, el)) {}
   else {
     // Block for Node, Fragment, Array, Functions, etc. This stringifies via h()
