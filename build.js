@@ -50,20 +50,19 @@ esbuild.build({
       const readDataFull = await readFile(file);
       const sourceComment = '\n//# sourceMappingURL=index.js.map';
       const indexEndOfCode = readDataFull.length - sourceComment.length;
+      const sizes = { file, min: 0, mingz: 0 };
       const readData = readDataFull.subarray(0, indexEndOfCode);
-      const writeData = await new Promise((res, rej) => {
+      sizes.min = readData.length;
+      await new Promise((res, rej) => {
         gzip(readData, { consume: true, level: 9 }, (err, data) => {
           if (err) rej(err);
+          sizes.mingz = data.length;
           // Emit the .gz file so webservers can serve that directly
           writeFile(file + '.gz', data);
           res(data);
         });
       });
-      return {
-        file,
-        min: readData.length,
-        mingz: writeData.length,
-      };
+      return sizes;
     })
 )).then((sizeObjects) => {
   sizeObjects.forEach(({ file, min, mingz }) => {
