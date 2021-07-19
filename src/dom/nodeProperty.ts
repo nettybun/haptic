@@ -8,12 +8,9 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
   // @ts-expect-error Empty if body
   // eslint-disable-next-line eqeqeq
   if (value == null);
-  else if (!name
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    || (name === 'attrs' && (isAttr = true))
-  ) {
+  else if (!name) {
     for (name in value as { [k: string]: unknown }) {
-      api.property(el, (value as { [k: string]: unknown })[name], name, isAttr, isCss);
+      api.property(el, (value as { [k: string]: unknown })[name], name, isAttr = true, isCss);
     }
   }
   // Functions added as event handlers are not executed on render
