@@ -25,9 +25,10 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
     el.addEventListener(name, value as EventHandler);
     listeners[name] = value as EventHandler;
   }
-  else if (api.patch(value, (v: unknown) => {
-    api.property(el, v, name, isAttr, isCss);
-  }, el, name)) {}
+  // Sorry this is cryptic. Bundlesize. Comma-operator returns v after api call.
+  else if (api.patch(value, (v) =>
+    (api.property(el, v, name, isAttr, isCss), v), el, name)
+  ) {}
   else if (isCss) {
     (el as HTMLElement | SVGElement).style.setProperty(name, value as string);
   }

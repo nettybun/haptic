@@ -20,7 +20,9 @@ const api: {
   patch: (
     value: unknown,
     // Reactivity could be haptic/w, sinuous/observable, mobx, etc
-    patchDOM?: (value: unknown) => void,
+    // Return `value` so a wire can be reused in multiple DOM nodes via chaining
+    // TODO: Add test (#3)
+    patchDOM?: <T = unknown>(value: T) => T,
     // Element being patched
     el?: Node,
     // If this is patching an element property, this is the attribute

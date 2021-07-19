@@ -39,9 +39,10 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
     // @ts-expect-error Reusing the variable but doesn't match the signature
     current = value;
   }
-  else if (api.patch(value, (v: unknown) => {
-    current = api.insert(el, v, endMark, current, startNode);
-  }, el)) {}
+  // Sorry this is cryptic. Bundlesize. Comma-operator returns v after api call.
+  else if (api.patch(value, (v) =>
+    (current = api.insert(el, v, endMark, current, startNode), v), el)
+  ) {}
   else {
     // Block for Node, Fragment, Array, Functions, etc. This stringifies via h()
     if (endMark) {
