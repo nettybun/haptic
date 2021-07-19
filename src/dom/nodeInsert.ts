@@ -11,8 +11,7 @@ const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag,
   // accurate if content gets pulled before clearing.
   startNode = (startNode || current instanceof Node && current) as ChildNode | null;
 
-  // @ts-expect-error Empty if body
-  if (value === current);
+  if (value === current) {}
   else if (
     (!current || typeof current === 'string')
     // @ts-ignore Doesn't like `value += ''`

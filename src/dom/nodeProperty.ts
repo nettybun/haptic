@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import { api } from './index.js';
 
 type EventHandler = (ev: Event) => unknown;
@@ -5,9 +6,7 @@ type NodeEvented = Node & { $l?: { [name: string]: EventHandler } };
 
 /** Set attributes and propeties on a node */
 export const property = (el: Node, value: unknown, name: string | null, isAttr?: boolean, isCss?: boolean) => {
-  // @ts-expect-error Empty if body
-  // eslint-disable-next-line eqeqeq
-  if (value == null);
+  if (value == null) {}
   else if (!name) {
     for (name in value as { [k: string]: unknown }) {
       api.property(el, (value as { [k: string]: unknown })[name], name, isAttr = true, isCss);
@@ -15,7 +14,7 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
   }
   // Functions added as event handlers are not executed on render
   // There's only one event listener per type
-  else if (name[0] === 'o' && name[1] === 'n') {
+  else if (name[0] == 'o' && name[1] == 'n') {
     const listeners = (el as NodeEvented).$l || ((el as NodeEvented).$l = {});
     name = name.slice(2).toLowerCase();
     // Remove the previous function
@@ -34,12 +33,12 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
   }
   else if (
     isAttr
-    || name.slice(0, 5) === 'data-'
-    || name.slice(0, 5) === 'aria-'
+    || name.slice(0, 5) == 'data-'
+    || name.slice(0, 5) == 'aria-'
   ) {
     (el as HTMLElement | SVGElement).setAttribute(name, value as string);
   }
-  else if (name === 'style') {
+  else if (name == 'style') {
     if (typeof value === 'string') {
       (el as HTMLElement | SVGElement).style.cssText = value;
     } else {
@@ -48,8 +47,7 @@ export const property = (el: Node, value: unknown, name: string | null, isAttr?:
   }
   else {
     // Default case; add as a property
-    if (name === 'class') name += 'Name';
     // @ts-expect-error
-    el[name] = value;
+    el[name == 'class' ? name + 'Name' : name] = value;
   }
 };

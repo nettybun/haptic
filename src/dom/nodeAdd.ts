@@ -19,7 +19,8 @@ const asNode = (value: unknown): Text | Node | DocumentFragment => {
 
 const maybeFragOrNode = (value: Text | Node | DocumentFragment): FragReturn => {
   const { childNodes } = value;
-  if (value.nodeType !== 11 /* DOCUMENT_FRAGMENT_NODE */) return;
+  // eslint-disable-next-line eqeqeq
+  if (value.nodeType != 11 /* DOCUMENT_FRAGMENT_NODE */) return;
   if (childNodes.length < 2) return childNodes[0];
   // For a fragment of 2 elements or more add a startMark. This is required for
   // multiple nested conditional computeds that return fragments.
