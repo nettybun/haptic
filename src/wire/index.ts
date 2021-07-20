@@ -85,9 +85,8 @@ declare const STATE_WIRED_STALE   = 4;
 // @ts-ignore
 const v$: SubToken = ((...signals) => signals.map((sig) => sig(v$)));
 
-
-// In signal() and core() `{ [id]() {} }[id]` preserves the function name
-// which is useful for debugging
+// In signalBase() and createCore() `{ [id]() {} }[id]` preserves the function
+// name which is useful for debugging
 
 /**
  * Create a core. Activate the core by running it (function call). Any signals
@@ -183,8 +182,7 @@ const corePause = (core: WireCore<X>) => {
   core.inner.forEach(corePause);
 };
 
-
-const createSignal = <T>(value: T, id = ''): WireSignal<T> => {
+const signalBase = <T>(value: T, id = ''): WireSignal<T> => {
   type C = WireCore<X>;
   let saved: unknown;
   // Multi-use temp variable
@@ -269,18 +267,19 @@ const createSignal = <T>(value: T, id = ''): WireSignal<T> => {
  * hold a list of subscribed cores. When a value is written those cores are
  * re-run. Writing a core into a signal creates a lazy computed-signal. Signals
  * are named by the key of the object entry and a global counter. */
-createSignal.object = <T>(obj: T): {
+const createSignal = <T>(obj: T): {
   [K in keyof T]: WireSignal<T[K] extends WireCore<infer R> ? R : T[K]>;
 } => {
   Object.keys(obj).forEach((k) => {
     // @ts-ignore Mutation of T
-    obj[k] = createSignal(obj[k as keyof T], k);
+    obj[k] = signalBase(obj[k as keyof T], k);
     signalId--;
   });
   signalId++;
   // @ts-ignore Mutation of T
   return obj;
 };
+createSignal.anon = signalBase;
 
 /**
  * Batch signal writes so only the last write per signal is applied. Values are

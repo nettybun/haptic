@@ -1,23 +1,36 @@
 # Haptic
 
 Reactive web rendering in TSX with no virtual DOM, no compilers, and no magic.
-It's 1600 bytes min+gz.
+It's under 1600 bytes min+gz.
 
 ```tsx
 import { h } from 'haptic';
 import { signal, core } from 'haptic/wire';
 import { when } from 'haptic/util';
 
-const data = signal.object({
-  // ...
-})
+const data = signal({
+  count: 0,
+  countNext: core($ => data.count($) + 1),
+});
 
-const App = () =>
-  <main>
-    TODO: Write example app
-  </main>;
+// Create a single anonymous signal
+const text = signal.anon(100);
+// Create a single signal
+const { name } = signal({ name: 100 })
 
-document.body.appendChild(<App/>);
+const Page = () =>
+  <div>
+    <button onClick={data.count(data.count() + 1)}>
+      Increment up to {core(data.countNext)}
+    </button>
+    <p>Content below changes when <code>data.count > 5</code></p>
+    {when(core($ => data.count($) > 5 ? "T" : "F"), {
+      T: () => <p>There have been more than 5 clicks</p>,
+      F: () => <p>Current click count is {core(data.count)}</p>,
+    })}
+  </div>;
+
+document.body.appendChild(<Page/>);
 ```
 
 ## Install
@@ -41,7 +54,7 @@ application like https://github.com/heyheyhello/stayknit.
 Haptic is split into a few different imports to help both bundled and unbundled
 development. The `haptic/dom` package handles rendering TSX and also supports a
 patch function to update content. This supports any reactivity library. Haptic
-comes with its own reacitive library packaged as `haptic/wire`. The `haptic`
+comes with its own reactive library packaged as `haptic/wire`. The `haptic`
 package is Haptic DOM with Haptic Wire set as the reactivity engine. It also
 modifies the JSX namespace to accepts cores as element attributes and children.
 
