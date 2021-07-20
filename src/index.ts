@@ -19,8 +19,7 @@
 
 import { api, h, svg } from './dom/index.js';
 
-// TODO: Renaming in phases
-import type { WireCore as Wire } from './wire/index.js';
+import type { Wire } from './state/index.js';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
 // When publishing swap out api.h for the correct JSX namespace in index.d.ts

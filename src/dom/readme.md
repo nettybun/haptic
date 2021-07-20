@@ -14,7 +14,7 @@ ecosystem. The Sinuous repository lists some [community packages][3].
 
 This package exports a vanilla JSX namespace that doesn't expect any reactive
 functions as elements or attributes. To support a reactive library, see the main
-Haptic package which [overwrites this JSX namespace][4] to support Haptic Wire;
+Haptic package which [overwrites this JSX namespace][4] to support Haptic State;
 follow a similar process to support another library of your choice.
 
 ## `h()`

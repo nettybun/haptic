@@ -1,9 +1,8 @@
 import { h } from '../dom/index.js';
 // TODO: Renaming in phases
-import { core as wire, coreAdopt as wireAdopt, corePause as wirePause } from '../wire/index.js';
+import { core as wire, coreAdopt as wireAdopt, corePause as wirePause } from '../state/index.js';
 
-// TODO: Renaming in phases
-import type { WireCore as Wire } from '../wire/index.js';
+import type { Wire } from '../state/index.js';
 
 type El = Element | Node | DocumentFragment;
 type Component = (...args: unknown[]) => El;

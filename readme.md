@@ -54,9 +54,9 @@ application like https://github.com/heyheyhello/stayknit.
 Haptic is split into a few different imports to help both bundled and unbundled
 development. The `haptic/dom` package handles rendering TSX and also supports a
 patch function to update content. This supports any reactivity library. Haptic
-comes with its own reactive library packaged as `haptic/wire`. The `haptic`
-package is Haptic DOM with Haptic Wire set as the reactivity engine. It also
-modifies the JSX namespace to accepts cores as element attributes and children.
+comes with its own reactive state library `haptic/state`. The `haptic` package
+is Haptic DOM with Haptic State targeted as the reactivity library by modifying
+the JSX namespace to accepts signals and wires as attributes and children.
 
 ### Reactivity
 
@@ -97,6 +97,7 @@ Sinuous taught the idea of being modular and supporting a flexible API that
 supports multiple reactive libraries; including no reactivity at all. Haptic has
 generalized this with `api.patch` but still maintains API-compatibility to
 support community packages. Most of the hyperscript reviver code is borrowed but
-the reactive state engine is now unrelated after many iterations.
+the state library is now unrelated after many iterations.
 
-Wire was influenced by Sinuous, Solid, S.js, Reactor.js, and Dipole.
+The reactive state library was influenced by Sinuous, Solid, S.js, Reactor.js,
+and Dipole.
