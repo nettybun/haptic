@@ -15,8 +15,6 @@ type WireCore<T = unknown> = {
   inner: Set<WireCore<X>>;
   /** FSM state: RESET|RUNNING|WAITING|PAUSED|STALE */
   state: CoreStates;
-  /** Number of parent cores (see wR.inner); to sort core runs */
-  sort: number;
   /** Run count */
   run: number;
   /** If part of a computed signal, this is its signal */
@@ -125,8 +123,6 @@ const createCore = <T>(fn: ($: SubToken) => T): WireCore<T> => {
   core.$core = 1;
   core.fn = fn;
   core.run = 0;
-  core.sort = activeCore ? activeCore.sort + 1 : 0;
-
   // @ts-ignore
   const $: SubToken = ((...sig) => sig.map((_sig) => _sig($)));
   $.$$ = 1;
@@ -146,14 +142,21 @@ const _initCore = (core: WireCore<X>): void => {
 };
 
 const _runCores = (cores: Set<WireCore<X>>): void => {
-  // Copy the cores since the Set() can be added to while running which loops
-  // infinitely. Depth ordering needs an array but in Sinuous they use a Set()
-  const toRun = [...cores].sort((a, b) => a.sort - b.sort);
+  // Use a new Set() to avoid infinite loops caused by cores writing to signals
+  // during their run.
+  const toRun = new Set(cores);
   // Mark upstream computeds as stale. Must be in an isolated for-loop
   toRun.forEach((core) => {
+    // TODO: Test (#3). Also benchmark?
+
+    // If a core's ancestor will run it'll destroy the children. Remove them.
+    // for (let p = core.parent; p; p = p.parent) {
+    //   if (toRun.has(p)) { toRun.delete(core); return; }
+    // }
+    // Equally: If a core's child is in the list, remove the child...
+    core.inner.forEach((ci) => toRun.delete(ci));
     if (core.state === STATE_WIRED_PAUSED || core.cs) core.state = STATE_WIRED_STALE;
   });
-  // Calls are ordered parent->child
   toRun.forEach((core) => {
     // RESET|RUNNING|WAITING < PAUSED|STALE. Skips paused cores and lazy
     // computed-signals. RESET cores shouldn't exist...
@@ -302,8 +305,8 @@ const transaction = <T>(fn: () => T): T => {
 
 /**
  * Run a function within the context of a core. Nested children cores are
- * adopted (see core.sort and core.inner). Also affects signal read consistency
- * checks for read-pass (signal.sigRP) and read-subscribe (signal.sigRS). */
+ * adopted (see core.inner). Also affects signal read consistency checks for
+ * read-pass (signal.sigRP) and read-subscribe (signal.sigRS). */
 const coreAdopt = <T>(core: WireCore<X>, fn: () => T): T => {
   const prev = activeCore;
   activeCore = core;
