@@ -21,6 +21,29 @@ follow a similar process to support another library of your choice.
 
 ## `api()`
 
+## `svg(closure: () => Node))`
+
+Tells Haptic's reviver to create SVG namespaced DOM elements for the duration of
+the closure. This means it uses `document.createElementNS` instead of the usual
+HTML `document.createElement`. Without this, elements like `<title>` would have
+very different behaviour.
+
+Usage:
+
+```tsx
+import { h, svg } from 'haptic'; // or 'haptic/dom';
+
+cosnt <Page> = () =>
+  <p>HTML text with an add icon {svg(() =>
+    <svg viewBox="0 0 15 15" fill="none" width="15" height="15">
+      <path d="M7.5 1v13M1 7.5h13" stroke="#000"/>
+    </svg>
+  )} inlined in the sentence.
+  </p>;
+
+document.body.appendChild(<Page/>);
+```
+
 [1]: https://github.com/heyheyhello/haptic/blob/haptic-w/src/index.ts#L26
 [2]: https://github.com/heyheyhello/haptic/tree/haptic-w/src/wire
 [3]: https://github.com/luwes/sinuous#community

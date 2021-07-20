@@ -5,6 +5,8 @@ import { insert } from './nodeInsert.js';
 import { property } from './nodeProperty.js';
 import { remove } from './nodeRemove.js';
 
+import { svg } from './svg.js';
+
 // This API should be compatible with community libraries that extend Sinuous
 const api: {
   /** Hyperscript reviver */
@@ -19,9 +21,9 @@ const api: {
   location as reactive, return true. Call patchDOM() anytime to update. */
   patch: (
     value: unknown,
-    // Reactivity could be haptic/w, sinuous/observable, mobx, etc
+    // Reactivity could be from Haptic, Sinuous, MobX, Hyperactiv, etc
     // Return `value` so a wire can be reused in multiple DOM nodes via chaining
-    // TODO: Add test (#3)
+    // TODO: Test (#3)
     patchDOM?: <T = unknown>(value: T) => T,
     // Element being patched
     el?: Node,
@@ -42,4 +44,4 @@ const api: {
 // Reference the latest internal h() allowing others to customize the call
 const h: typeof _h = (...args) => api.h(...args);
 
-export { api, h };
+export { api, h, svg };

@@ -1,6 +1,7 @@
-// For testing bundle size with `npm run bundlesize`
-export * from './';
-export { signal, core } from './wire';
+// For testing bundle size with `npm run bundlesize`. This assumes they're using
+// the default `api` and won't use `svg()`.
+export { h } from './index.js';
+export { signal, core } from './wire/index.js';
 
 /*
 > esbuild
