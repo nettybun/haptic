@@ -1,3 +1,4 @@
 node_modules
 publish
 *.map
+.vscode
