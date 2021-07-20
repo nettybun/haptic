@@ -103,7 +103,7 @@ const createCore = <T>(fn: ($: SubToken) => T): Wire<T> => {
     if (core.state === FSM_RUNNING) {
       throw new Error(`Loop ${core.name}`);
     }
-    // If STATE_PAUSED then STATE_STALE was never reached; nothing has changed.
+    // If FSM_PAUSED then FSM_STALE was never reached; nothing has changed.
     // Restore state (below) and call inner cores so they can check
     if (core.state === FSM_WIRED_PAUSED) {
       core.inner.forEach((_core) => { _core(); });
@@ -155,7 +155,9 @@ const _runCores = (cores: Set<Wire<X>>): void => {
     // }
     // Equally: If a core's child is in the list, remove the child...
     core.inner.forEach((ci) => toRun.delete(ci));
-    if (core.state === FSM_WIRED_PAUSED || core.cs) core.state = FSM_WIRED_STALE;
+    if (core.state === FSM_WIRED_PAUSED || core.cs) {
+      core.state = FSM_WIRED_STALE;
+    }
   });
   toRun.forEach((core) => {
     // RESET|RUNNING|WAITING < PAUSED|STALE. Skips paused cores and lazy
@@ -188,7 +190,7 @@ const signalBase = <T>(value: T, id = ''): Signal<T> => {
   let saved: unknown;
   // Multi-use temp variable
   let read: unknown = `signal|${signalId++}{${id}}`;
-  const signal = { [read as string](...args: [$?: SubToken, ...unused: unknown[]]) {
+  const signal = { [read as string](...args: [$?: SubToken, ..._: unknown[]]) {
     // Case: Read-Pass. Marks the active running core as a reader
     if ((read = !args.length)) {
       if (activeCore) {

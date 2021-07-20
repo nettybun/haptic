@@ -4,18 +4,18 @@ import { readFile, writeFile } from 'fs/promises';
 
 const entryPoints = [
   'src/dom/index.ts',
-  'src/wire/index.ts',
-  'src/std/index.ts',
+  'src/state/index.ts',
+  'src/stdlib/index.ts',
   'src/index.ts',
 ];
 
 // About 100 characters saved this way
 const define = {
-  STATE_RESET: 0,
-  STATE_RUNNING: 1,
-  STATE_WIRED_WAITING: 2,
-  STATE_WIRED_PAUSED: 3,
-  STATE_WIRED_STALE: 4,
+  FSM_RESET: 0,
+  FSM_RUNNING: 1,
+  FSM_WIRED_WAITING: 2,
+  FSM_WIRED_PAUSED: 3,
+  FSM_WIRED_STALE: 4,
 };
 
 // This is explained in ./src/index.ts. Haptic's bundle entrypoint isn't a self
@@ -24,8 +24,8 @@ const define = {
 const externalPlugin = {
   name: 'external',
   setup(build) {
-    build.onResolve({ filter: /\.\/(dom|wire)/ }, (args) => {
-      const [, name] = args.path.match(/(dom|wire)/);
+    build.onResolve({ filter: /\.\/(dom|state)/ }, (args) => {
+      const [, name] = args.path.match(/(dom|state)/);
       // console.log(args, name);
       return { path: `haptic/${name}`, external: true };
     });

@@ -15,7 +15,7 @@
 // extend it yourself for other reactive state libraries.
 
 // Higher-level features such as control flow, lifecycles, and context are
-// available in haptic/std
+// available in haptic/stdlib
 
 import { api, h, svg } from './dom/index.js';
 

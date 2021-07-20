@@ -6,7 +6,7 @@ It's under 1600 bytes min+gz.
 ```tsx
 import { h } from 'haptic';
 import { signal, core } from 'haptic/state';
-import { when } from 'haptic/std';
+import { when } from 'haptic/stdlib';
 
 const data = signal({
   count: 0,
