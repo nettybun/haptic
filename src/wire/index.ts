@@ -207,14 +207,24 @@ const createSignal = <T>(value: T, id = ''): WireSignal<T> => {
       if ((read as C).sigRP.has(signal)) {
         throw new Error(`${(read as C).name} mixes sig($) & sig()`);
       }
+      // Two-way link. Signal writes will now call/update core C
       (read as C).sigRS.add(signal);
       signal.cores.add((read as C));
-      // Subscribing to a computed-signal also links its core's signals
-      signal.cc && signal.cc.sigRS.forEach((_signal) => {
-        // Link to sigIC not sigRP/sigRS to not break the "mixes sig" errors
-        (read as C).sigIC.add(_signal);
-        _signal.cores.add((read as C));
-      });
+
+      // Computed-signals (signals holding a core; signal.cc) can't only run C
+      // when written to, they also need to run C when cc is marked stale. How
+      // do we know when that happens? It'll be when one of cc.sigRS signals
+      // calls cc. So, link this `read` core to each cc.sigRS call list; it'll
+      // be called as collateral.
+      if (signal.cc) {
+        signal.cc.sigRS.forEach((_signal) => {
+          // Linking _must_ be two-way. From signal.cores to core.sigXYZ. Until
+          // now it's always either sigRP or sigRP, but if we use those we'll
+          // break the mix error checking (above). So use a new list, sigIC.
+          (read as C).sigIC.add(_signal);
+          _signal.cores.add((read as C));
+        });
+      }
     }
     // Case: Write
     else {
