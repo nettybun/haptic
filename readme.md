@@ -74,28 +74,29 @@ _TODO: Link to screenshots as done in issue #5_
 
 ## Ideas and Values
 
-Haptic's focus is to be good inside and out. Libraries do this best when they
-help developers and non-developers alike; some good values are being intuitive,
-explicit, short, and transparent. Haptic does this by focusing on vanilla TS/JS
-rather than a DSL, being small with no dependencies, and being descriptive and
-recoverable about errors. An unfortunate trend on the web is to to over-engineer
-tools with complex and custom compilers, languages, and dependencies. This hurts
+Haptic was born out of "JavaScript Fatigue" and of wanting to target new and
+experienced developers alike. It's explicit, small, has no dependencies, chooses
+vanilla TS/JS over DSLs, is descriptive and recoverable about its errors, and is
+interoperable with other libraries.
+
+Part of programming today is dealing with the constant over-engineer of tools
+with complex and custom compilers, languages, and dependencies. This hurts
 everyone through burnout and gatekeeping. Few people understand the tools they
 use everyday. You don't have to understand Haptic to use it, but know you're in
 good company if you ever wish to look under the hood. It's only ~600 lines of
-documented source code; 320 is its single-file reactivity engine.
+documented source code; 340 is its single-file reactive state engine.
 
 You should be able to publish a modern reactive web app and understand the whole
 programming stack. Haptic started as a way to help non-developers write code.
 
-## Inspiration
+## Motivation
 
 Haptic started as a rewrite of Sinuous in TS using TSX over tag templates for
-HTML. The focus was on type safety, debugging, and leverging the editor. Sinuous
-originally taught the idea of being modular and supporting a flexible API that
+HTML. The focus was on type safety, debugging, and leveraging the editor.
+Sinuous taught the idea of being modular and supporting a flexible API that
 supports multiple reactive libraries; including no reactivity at all. Haptic has
 generalized this with `api.patch` but still maintains API-compatibility to
-support community packages. Most of the hyperscript reviver code is still
-borrowed, but the reactivity engine has been replaced with Haptic Wire.
+support community packages. Most of the hyperscript reviver code is borrowed but
+the reactive state engine is now unrelated after many iterations.
 
 Wire was influenced by Sinuous, Solid, S.js, Reactor.js, and Dipole.
