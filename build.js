@@ -5,7 +5,7 @@ import { readFile, writeFile } from 'fs/promises';
 const entryPoints = [
   'src/dom/index.ts',
   'src/wire/index.ts',
-  'src/utils/index.ts',
+  'src/std/index.ts',
   'src/index.ts',
 ];
 
@@ -24,9 +24,10 @@ const define = {
 const externalPlugin = {
   name: 'external',
   setup(build) {
-    build.onResolve({ filter: /\.\/(dom|wire)$/ }, (args) => {
-      const importPath = args.path.replace(/^.+\//, 'haptic/');
-      return { path: importPath, external: true };
+    build.onResolve({ filter: /\.\/(dom|wire)/ }, (args) => {
+      const [, name] = args.path.match(/(dom|wire)/);
+      // console.log(args, name);
+      return { path: `haptic/${name}`, external: true };
     });
   },
 };

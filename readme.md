@@ -5,12 +5,12 @@ It's under 1600 bytes min+gz.
 
 ```tsx
 import { h } from 'haptic';
-import { signal, core } from 'haptic/wire';
-import { when } from 'haptic/util';
+import { signal, core } from 'haptic/state';
+import { when } from 'haptic/std';
 
 const data = signal({
   count: 0,
-  countNext: core($ => data.count($) + 1),
+  countNext: wire($ => data.count($) + 1),
 });
 
 // Create a single anonymous signal
@@ -21,12 +21,12 @@ const { name } = signal({ name: 100 })
 const Page = () =>
   <div>
     <button onClick={data.count(data.count() + 1)}>
-      Increment up to {core(data.countNext)}
+      Increment up to {wire(data.countNext)}
     </button>
     <p>Content below changes when <code>data.count > 5</code></p>
-    {when(core($ => data.count($) > 5 ? "T" : "F"), {
+    {when(wire($ => data.count($) > 5 ? "T" : "F"), {
       T: () => <p>There have been more than 5 clicks</p>,
-      F: () => <p>Current click count is {core(data.count)}</p>,
+      F: () => <p>Current click count is {wire(data.count)}</p>,
     })}
   </div>;
 

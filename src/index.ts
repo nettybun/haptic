@@ -1,49 +1,53 @@
-// Haptic is a bundle of haptic/dom and haptic/wire as the reactivity engine.
-// You access haptic/wire on its own:
+// Haptic is a bundle of haptic/dom configured to work with haptic/state as the
+// reactivity engine. You access haptic/state on its own:
 
 // import { h } from 'haptic';
-// import { signal, core } from 'haptic/wire';
+// import { signal, wire } from 'haptic/state';
 
-// The 'haptic' package doesn't embed haptic/wire in the bundle, so code is only
+// The 'haptic' package doesn't embed haptic/state in the bundle; code is only
 // loaded once despite having two import sites. This should work well for both
 // bundlers and unbundled ESM-only/Snowpack/UNPKG workflows. It's important to
-// only run one instance of haptic/wire because reactivity depends on accessing
+// only run one instance of haptic/state because reactivity depends on accessing
 // some shared global state that is setup during import.
 
-// This bundle also extends the JSX namespace to allow using WireCore functions.
-// Use haptic/dom directly to use a vanilla JSX namespace or to extend it for
-// other reactive libraries; sinuous/observable, haptic/s, hyperactiv, etc.
+// This bundle also extends the JSX namespace to allow using wires in attributes
+// and children. Use haptic/dom directly to use a vanilla JSX namespace or to
+// extend it yourself for other reactive state libraries.
 
-// Utilities functions svg() and when() are available in haptic/utils.
+// Higher-level features such as control flow, lifecycles, and context are
+// available in haptic/std
 
 import { api, h, svg } from './dom/index.js';
 
-import type { WireCore } from './wire';
+// TODO: Renaming in phases
+import type { WireCore as Wire } from './wire/index.js';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
-// Swap out h to have the correct JSX namespace; commit #d7cd2819
+// When publishing swap out api.h for the correct JSX namespace in index.d.ts
+// https://github.com/heyheyhello/haptic/commit/d7cd2819f538c3901ffb0c59e9226fa68d3ae4a9
 // declare api = Omit<typeof _api, 'h'> & { h: typeof h };
 
 api.patch = (value, patchDOM) => {
-  // @ts-ignore
-  const $wC = (value && value.$wC) as boolean;
-  const { fn } = value as WireCore;
-  if ($wC && patchDOM) {
-    (value as WireCore).fn = ($) => patchDOM(fn($));
-    (value as WireCore)();
+  // I like type fields that use 1 instead of true/false, so convert via `!!`
+  // eslint-disable-next-line no-implicit-coercion
+  const $core = (value && !!(value as Wire).$core) as boolean;
+  const { fn } = value as Wire;
+  if ($core && patchDOM) {
+    (value as Wire).fn = ($) => patchDOM(fn($));
+    (value as Wire)();
   }
-  return $wC;
+  return $core;
 };
 
 export { api, h, svg };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DistributeCoreT<T> = T extends any ? WireCore<T> : never;
+type DistributeWire<T> = T extends any ? Wire<T> : never;
 
 declare namespace h {
   export namespace JSX {
-    type MaybeCore<T> = T | DistributeCoreT<T>;
-    type AllowCoreForProperties<T> = { [K in keyof T]: MaybeCore<T[K]> };
+    type MaybeWire<T> = T | DistributeWire<T>;
+    type AllowWireForProperties<T> = { [K in keyof T]: MaybeWire<T[K]> };
 
     type Element = HTMLElement | SVGElement | DocumentFragment;
 
@@ -59,15 +63,15 @@ declare namespace h {
       = GenericEventAttrs<Target> & { children?: unknown };
 
     type HTMLAttributes<Target extends EventTarget>
-      = AllowCoreForProperties<Omit<HTMLAttrs, 'style'>>
+      = AllowWireForProperties<Omit<HTMLAttrs, 'style'>>
         & { style?:
-            | MaybeCore<string>
-            | { [key: string]: MaybeCore<string | number> };
+            | MaybeWire<string>
+            | { [key: string]: MaybeWire<string | number> };
           }
         & DOMAttributes<Target>;
 
     type SVGAttributes<Target extends EventTarget>
-      = AllowCoreForProperties<SVGAttrs> & HTMLAttributes<Target>;
+      = AllowWireForProperties<SVGAttrs> & HTMLAttributes<Target>;
 
     type IntrinsicElements =
       & { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>; }

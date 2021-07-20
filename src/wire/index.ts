@@ -1,4 +1,6 @@
-// Haptic Wire
+// Haptic's reactive state engine
+
+// TODO: Renaming in phases
 
 type WireCore<T = unknown> = {
   /** Run the core */

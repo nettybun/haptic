@@ -3,7 +3,7 @@
 This is a fork of the Sinuous "h" package that has been ported to TypeScript,
 simplified in a few places, and adapted to support a general [`api.patch()`][1]
 method for reactive libraries. As a package, haptic/dom isn't tied to any
-reactive library, so while Haptic as a bundle defaults to [haptic/wire][2],
+reactive library, so while Haptic as a bundle defaults to [haptic/state][2],
 others such as sinuous/observable, mobx, and hyperactiv should work fine. This
 package can also be used without reactivity at all.
 

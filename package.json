@@ -20,9 +20,9 @@
       "import": "./publish/wire/index.js",
       "require": "./publish/wire/index.cjs"
     },
-    "./utils": {
-      "import": "./publish/utils/index.js",
-      "require": "./publish/utils/index.cjs"
+    "./std": {
+      "import": "./publish/std/index.js",
+      "require": "./publish/std/index.cjs"
     }
   },
   "keywords": [
