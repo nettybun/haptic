@@ -5,7 +5,7 @@ It's under 1600 bytes min+gz.
 
 ```tsx
 import { h } from 'haptic';
-import { signal, core } from 'haptic/state';
+import { signal, wire } from 'haptic/state';
 import { when } from 'haptic/stdlib';
 
 const data = signal({
@@ -62,7 +62,7 @@ the JSX namespace to accepts signals and wires as attributes and children.
 
 _TODO: Example snippets. Try to do a light overview and then redirect to ./wire/readme.md_
 
-Reactivity is wired into a page explicitly by subscribing signals and cores.
+Reactivity is wired into a page explicitly by subscribing signals and wires.
 This is then debuggable at runtime with proper naming and lookups.
 
 <...>

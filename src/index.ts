@@ -29,13 +29,13 @@ import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements 
 api.patch = (value, patchDOM) => {
   // I like type fields that use 1 instead of true/false, so convert via `!!`
   // eslint-disable-next-line no-implicit-coercion
-  const $core = (value && !!(value as Wire).$core) as boolean;
+  const $wire = (value && !!(value as Wire).$wire) as boolean;
   const { fn } = value as Wire;
-  if ($core && patchDOM) {
+  if ($wire && patchDOM) {
     (value as Wire).fn = ($) => patchDOM(fn($));
     (value as Wire)();
   }
-  return $core;
+  return $wire;
 };
 
 export { api, h, svg };

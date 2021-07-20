@@ -1,7 +1,7 @@
 // For testing bundle size with `npm run bundlesize`. This assumes they're using
 // the default `api` and won't use `svg()`.
 export { h } from './index.js';
-export { signal, core } from './state/index.js';
+export { signal, wire } from './state/index.js';
 
 /*
 > esbuild

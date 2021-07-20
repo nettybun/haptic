@@ -1,6 +1,5 @@
 import { h } from '../dom/index.js';
-// TODO: Renaming in phases
-import { core as wire, coreAdopt as wireAdopt, corePause as wirePause } from '../state/index.js';
+import { wire, wireAdopt, wirePause } from '../state/index.js';
 
 import type { Wire } from '../state/index.js';
 
