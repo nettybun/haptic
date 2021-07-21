@@ -11,19 +11,26 @@ import { signal, wire } from 'haptic/state';
 import { when } from 'haptic/stdlib';
 
 const state = signal({
+  text: '',
   count: 0,
-  countNext: wire($ => state.count($) + 1),
 });
 
 const Page = () =>
   <div>
+    <h1>"{wire(data.text)}"</h1>
+    <p>You've typed {wire($ => state.text().length)} characters</p>
+    <input
+      placeholder='Type here!'
+      value={wire(data.text)}
+      onChange={(ev) => data.text(ev.currentTarget.value)}
+    />
     <button onClick={state.count(state.count() + 1)}>
-      Increment to {wire(state.countNext)}
+      +1
     </button>
-    <p>Content below changes when <code>state.count > 5</code></p>
+    <p>After {wire($ => 5 - state.count($))} clicks the content will change</p>
     {when(wire($ => state.count($) > 5 ? "T" : "F"), {
-      T: () => <p>There have been more than 5 clicks</p>,
-      F: () => <p>Current click count is {wire(state.count)}</p>,
+      T: () => <strong>There are over 5 clicks!</strong>,
+      F: () => <p>Clicks: {wire(state.count)}</p>,
     })}
   </div>;
 
