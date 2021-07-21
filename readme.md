@@ -76,13 +76,13 @@ The `haptic` package is simply a version of `haptic/dom` configured to use
 
 Rendering is handled in `haptic/dom` and supports any reactive library including
 none at all. Reactivity and state is provided by `haptic/state`. Framework
-features are kept in the standard library, `haptic/stdlib`.
+features are part of the standard library in `haptic/stdlib`.
 
-### [Haptic DOM](./dom/readme.md)
+### [Haptic DOM](./src/dom/readme.md)
 
-### [Haptic State](./state/readme.md)
+### [Haptic State](./src/state/readme.md)
 
-### [Haptic Stdlib](./stdlib/readme.md)
+### [Haptic Stdlib](./src/stdlib/readme.md)
 
 ## Motivation
 
