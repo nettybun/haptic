@@ -13,7 +13,7 @@ type Wire<T = unknown> = {
   sigIC: Set<Signal<X>>;
   /** Wires created during this run (children of this parent) */
   inner: Set<Wire<X>>;
-  /** FSM state: RESET|RUNNING|WAITING|PAUSED|STALE */
+  /** FSM state: RESET|RUNNING|IDLE|PAUSED|STALE */
   state: WireFSM;
   /** Run count */
   run: number;
@@ -35,7 +35,7 @@ type Signal<T = unknown> = {
   /** Transaction value; set and deleted on commit */
   next?: T;
   /** If this is a computed-signal, this is its wire */
-  cc?: Wire<T>;
+  cw?: Wire<T>;
   /** To check "if x is a signal" */
   $signal: 1;
 };
@@ -54,7 +54,7 @@ type SubToken = {
 type WireFSM =
   | typeof FSM_RESET
   | typeof FSM_RUNNING
-  | typeof FSM_WIRED_WAITING
+  | typeof FSM_WIRED_IDLE
   | typeof FSM_WIRED_PAUSED
   | typeof FSM_WIRED_STALE;
 
@@ -73,11 +73,11 @@ let transactionCommit = false;
 
 // Symbol() doesn't gzip well. `[] as const` gzips best but isn't debuggable
 // without a lookup Map<> and other hacks.
-declare const FSM_RESET         = 0;
-declare const FSM_RUNNING       = 1;
-declare const FSM_WIRED_WAITING = 2;
-declare const FSM_WIRED_PAUSED  = 3;
-declare const FSM_WIRED_STALE   = 4;
+declare const FSM_RESET        = 0;
+declare const FSM_RUNNING      = 1;
+declare const FSM_WIRED_IDLE   = 2;
+declare const FSM_WIRED_PAUSED = 3;
+declare const FSM_WIRED_STALE  = 4;
 
 /**
  * Void subcription token. Used when a function demands a token but you don't
@@ -115,7 +115,7 @@ const createWire = <T>(fn: ($: SubToken) => T): Wire<T> => {
       wire.run++;
     }
     wire.state = wire.sigRS.size
-      ? FSM_WIRED_WAITING
+      ? FSM_WIRED_IDLE
       : FSM_RESET;
     return saved;
   } }[id];
@@ -159,7 +159,7 @@ const _runWires = (wires: Set<Wire<X>>): void => {
     }
   });
   toRun.forEach((wire) => {
-    // RESET|RUNNING|WAITING < PAUSED|STALE. Skips paused wires and lazy
+    // RESET|RUNNING|IDLE < PAUSED|STALE. Skips paused wires and lazy
     // computed-signals. RESET wires shouldn't exist...
     if (wire.state < FSM_WIRED_PAUSED) wire();
   });
@@ -211,13 +211,13 @@ const signalBase = <T>(value: T, id = ''): Signal<T> => {
       (read as C).sigRS.add(signal);
       signal.wires.add((read as C));
 
-      // Computed-signals (signals holding a wire; signal.cc) can't only run C
-      // when written to, they also need to run C when cc is marked stale. How
-      // do we know when that happens? It'll be when one of cc.sigRS signals
-      // calls cc. So, link this `read` wire to each cc.sigRS call list; it'll
+      // Computed-signals (signals holding a wire; signal.cw) can't only run C
+      // when written to, they also need to run C when cw is marked stale. How
+      // do we know when that happens? It'll be when one of cw.sigRS signals
+      // calls cw. So, link this `read` wire to each cw.sigRS call list; it'll
       // be called as collateral.
-      if (signal.cc) {
-        signal.cc.sigRS.forEach((_signal) => {
+      if (signal.cw) {
+        signal.cw.sigRS.forEach((_signal) => {
           // Linking _must_ be two-way. From signal.wires to wire.sigXYZ. Until
           // now it's always either sigRP or sigRP, but if we use those we'll
           // break the mix error checking (above). So use a new list, sigIC.
@@ -235,10 +235,10 @@ const signalBase = <T>(value: T, id = ''): Signal<T> => {
         return;
       }
       // If overwriting a computed-signal wire, unsubscribe the wire
-      if (signal.cc) {
-        wireReset(signal.cc);
-        delete signal.cc.cs; // Part of unsubscribing/cleaning the wire
-        delete signal.cc;
+      if (signal.cw) {
+        wireReset(signal.cw);
+        delete signal.cw.cs; // Part of unsubscribing/cleaning the wire
+        delete signal.cw;
       }
       saved = args[0] as unknown as T;
       // If writing a wire, this signal becomes as a computed-signal
@@ -246,14 +246,14 @@ const signalBase = <T>(value: T, id = ''): Signal<T> => {
       if (saved && (saved as Wire).$wire) {
         (saved as C).cs = signal;
         (saved as C).state = FSM_WIRED_STALE;
-        signal.cc = saved as C;
+        signal.cw = saved as C;
       }
       // Notify every write _unless_ this is a post-transaction commit
       if (!transactionCommit && signal.wires.size) _runWires(signal.wires);
     }
     if (read) {
       // Re-run the wire to get a new value if needed
-      if (signal.cc && signal.cc.state === FSM_WIRED_STALE) saved = signal.cc();
+      if (signal.cw && signal.cw.state === FSM_WIRED_STALE) saved = signal.cw();
       return saved;
     }
   } }[read as string] as Signal<T>;

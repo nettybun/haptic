@@ -13,7 +13,7 @@ const entryPoints = [
 const define = {
   FSM_RESET: 0,
   FSM_RUNNING: 1,
-  FSM_WIRED_WAITING: 2,
+  FSM_WIRED_IDLE: 2,
   FSM_WIRED_PAUSED: 3,
   FSM_WIRED_STALE: 4,
 };

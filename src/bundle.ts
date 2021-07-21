@@ -10,7 +10,7 @@ export { signal, wire } from './state/index.js';
   --minify
   --define:FSM_RESET=0
   --define:FSM_RUNNING=1
-  --define:FSM_WIRED_WAITING=2
+  --define:FSM_WIRED_IDLE=2
   --define:FSM_WIRED_PAUSED=3
   --define:FSM_WIRED_STALE=4 | gzip -9 | wc -c
 */
