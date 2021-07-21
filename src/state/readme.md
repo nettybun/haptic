@@ -118,3 +118,8 @@ wire($ => {
 In the above example, typing in the input box updates the text signal and causes
 updates to the DOM and logs to the console. However, updates to the count signal
 don't update anything; no one is subscribed.
+
+## Computed-Signals
+
+// TODO: Example of lazy execution where "expensive calculation" isn't run until
+necessary (when it's read by an effect wire)
