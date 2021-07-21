@@ -37,8 +37,9 @@ embraces the web.
 The barrier to entry in web development is so high because we're drowning in the
 over-engineering of our own tools.
 
-This is a step away from compilers, customs DSLs, and DOM diffing. Instead,
-Haptic focuses on a modern and reliable developer experience.
+This is a step away from compilers, customs DSLs, and DOM diffing.
+
+Instead, Haptic focuses on a modern and reliable developer experience:
 
 - __Writing in the editor__ leverages TypeScript to provide strong type feedback
   and verify code before it's even run. JSDoc comments also supply documentation
