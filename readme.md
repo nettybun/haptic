@@ -46,8 +46,10 @@ Instead, Haptic focuses on a modern and reliable developer experience:
   when hovering over all exports.
 
 - __Testing at runtime__ behaves as you'd expect; a div is a div. It's also
-  nicely debuggable with helpful error messages and implicitly named data types
-  that naturally show up in the console and stacktraces. You'll thank me later.
+  nicely debuggable with good error messages and by promoting code styles that
+  naturally name things in ways that are displayed in console logs and
+  stacktraces. It's subtle, but it's especially helpful for reviewing reactive
+  subscriptions. You'll thank me later.
 
 - __Optimizing code__ is something you can do by hand. Haptic let's you write
   modern reactive web apps and still understand every part of the code. You
