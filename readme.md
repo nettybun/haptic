@@ -1,7 +1,9 @@
 # Haptic
 
 Reactive web rendering in TSX with no virtual DOM, no compilers, no
-dependencies, and no magic. It's under 1600 bytes min+gz.
+dependencies, and no magic.
+
+It's under 1600 bytes min+gz.
 
 ```tsx
 import { h } from 'haptic';
