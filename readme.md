@@ -37,9 +37,9 @@ const Page = () =>
 document.body.appendChild(<Page/>);
 ```
 
-Haptic is small, explicit, and modest because it was born out of JavaScript
-Fatigue. It runs in vanilla JS environments and renders using the DOM. It
-embraces the web.
+The reason Haptic is small, explicit, and modest is because it was born out of
+JavaScript Fatigue. It runs in vanilla JS environments and renders using the
+DOM. It embraces the web.
 
 The barrier to entry in web development is so high because we're drowning in the
 over-engineering of our own tools.
@@ -85,11 +85,11 @@ Rendering is handled in `haptic/dom` and supports any reactive library including
 none at all. Reactivity and state is provided by `haptic/state`. Framework
 features are part of the standard library in `haptic/stdlib`.
 
-### [Haptic DOM](./src/dom/readme.md)
+### [haptic/dom](./src/dom/readme.md)
 
-### [Haptic State](./src/state/readme.md)
+### [haptic/state](./src/state/readme.md)
 
-### [Haptic Stdlib](./src/stdlib/readme.md)
+### [haptic/stdlib](./src/stdlib/readme.md)
 
 ## Motivation
 
