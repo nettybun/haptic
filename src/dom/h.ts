@@ -35,12 +35,12 @@ function h(tag: Tag, ...args: unknown[]): El | undefined {
       // Direct add fast path
       api.add(el, arg);
     }
+    else if (Array.isArray(arg)) {
+      args.push(...arg);
+    }
     else if (typeof arg === 'object') {
       // eslint-disable-next-line no-implicit-coercion
       api.property(el, arg, null, !!api.ns);
-    }
-    else if (Array.isArray(arg)) {
-      args.push(...arg);
     }
     else if (api.patch(arg)) {
       // Last parameter, endMark, is a Text('') node; see nodeAdd.js#Frag
