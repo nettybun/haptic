@@ -27,7 +27,9 @@ function h(tag: Tag, ...args: unknown[]): El | undefined {
   else {
     el = tag;
   }
-  args.forEach((arg) => {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+
     // @ts-expect-error Empty if
     // eslint-disable-next-line eqeqeq
     if (arg == null);
@@ -51,7 +53,7 @@ function h(tag: Tag, ...args: unknown[]): El | undefined {
       // eslint-disable-next-line no-implicit-coercion,@typescript-eslint/restrict-plus-operands
       api.add(el, '' + arg);
     }
-  });
+  }
   return el;
 }
 
