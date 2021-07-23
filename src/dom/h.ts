@@ -11,7 +11,7 @@ function h(tag: Tag, ...args: unknown[]): El | undefined {
   if (typeof tag === 'function') {
     return tag(...args);
   }
-  let el: El;
+  let el: El, arg: unknown;
   if (typeof tag === 'string') {
     el = api.ns
       ? document.createElementNS(api.ns, tag)
@@ -19,26 +19,23 @@ function h(tag: Tag, ...args: unknown[]): El | undefined {
   }
   else if (Array.isArray(tag)) {
     el = document.createDocumentFragment();
-    // Using unshift(tag) is -2 bytes but changes the order of args.forEach
-    // Not sure what the expected behaviour is for h([a,b],c,d)
+    // Using unshift(tag) is -1b gz smaller but is an extra loop iteration
     args.unshift(...tag);
   }
   // Hopefully Element, Node, DocumentFragment, but could be anything...
   else {
     el = tag;
   }
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i]
-
-    // @ts-expect-error Empty if
+  while (args.length) {
+    arg = args.shift();
     // eslint-disable-next-line eqeqeq
-    if (arg == null);
+    if (arg == null) {}
     else if (typeof arg === 'string' || arg instanceof Node) {
       // Direct add fast path
       api.add(el, arg);
     }
     else if (Array.isArray(arg)) {
-      args.push(...arg);
+      args.unshift(...arg);
     }
     else if (typeof arg === 'object') {
       // eslint-disable-next-line no-implicit-coercion
