@@ -1,5 +1,22 @@
 // Haptic's reactive state engine
 
+type Signal<T = unknown> = {
+  /** Read value */
+  (): T;
+  /** Write value; notifying wires */ // Ordered before ($):T for TS to work
+  (value: T): void;
+  /** Read value & subscribe */
+  ($: SubToken): T;
+  /** Wires subscribed to this signal */
+  wires: Set<Wire<X>>;
+  /** Transaction value; set and deleted on commit */
+  next?: T;
+  /** If this is a computed-signal, this is its wire */
+  cw?: Wire<T>;
+  /** To check "if x is a signal" */
+  $signal: 1;
+};
+
 type Wire<T = unknown> = {
   /** Run the wire */
   (): T;
@@ -23,23 +40,6 @@ type Wire<T = unknown> = {
   $wire: 1;
 };
 
-type Signal<T = unknown> = {
-  /** Read value */
-  (): T;
-  /** Write value; notifying wires */ // Ordered before ($):T for TS to work
-  (value: T): void;
-  /** Read value & subscribe */
-  ($: SubToken): T;
-  /** Wires subscribed to this signal */
-  wires: Set<Wire<X>>;
-  /** Transaction value; set and deleted on commit */
-  next?: T;
-  /** If this is a computed-signal, this is its wire */
-  cw?: Wire<T>;
-  /** To check "if x is a signal" */
-  $signal: 1;
-};
-
 type SubToken = {
   /** Allow $(...signals) to return an array of read values */
   <U extends Array<() => unknown>>(...args: U): {
@@ -61,6 +61,7 @@ type WireFSM =
 /* eslint-disable no-multi-spaces */
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 type X = any;
+type P<T> = Partial<T>;
 
 let wireId = 0;
 let signalId = 0;
@@ -203,7 +204,7 @@ const signalBase = <T>(value: T, id = ''): Signal<T> => {
     else if ((read = args[0] === v$)) {}
     // Case: Read-Subscribe. Marks the wire registered in `$` as a reader
     // This could be different than the actively running wire, but shouldn't be
-    else if ((read = args[0] && (args[0] as { $$?: 1 }).$$ && args[0].wire)) {
+    else if ((read = args[0] && (args[0] as P<SubToken>).$$ && args[0].wire)) {
       if ((read as C).sigRP.has(signal)) {
         throw new Error(`${(read as C).name} mixes sig($) & sig()`);
       }
@@ -334,7 +335,7 @@ const wireAdopt = <T>(wire: Wire<X>, fn: () => T): T => {
 };
 
 export {
-  // Using createX avoids variable shadowing
+  // Using createX avoids variable shadowing, rename here
   createSignal as signal,
   createWire as wire,
   wireReset,
@@ -344,4 +345,4 @@ export {
   v$ // Actual subtokens are only ever provided by a wire
 };
 
-export type { Signal, Wire, WireFSM, SubToken };
+export type { Signal, Wire, WireState, SubToken };
