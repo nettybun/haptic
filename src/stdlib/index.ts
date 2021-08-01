@@ -1,8 +1,9 @@
 import { h } from '../dom/index.js';
-import { wire, wireAdopt, wirePause } from '../state/index.js';
+import { wire, wireAdopt, wirePause, wireResume } from '../state/index.js';
 
 import type { Wire } from '../state/index.js';
 
+// TODO: Export types (#11)
 type El = Element | Node | DocumentFragment;
 type Component = (...args: unknown[]) => El;
 
@@ -12,28 +13,29 @@ const when = <T extends string>(
   views: { [k in T]?: Component }
 ): Wire<El | undefined> => {
   const activeEls = {} as { [k in T]?: El };
-  const activeWires = {} as { [k in T]?: Wire<void> };
-  let condActive: T;
-  const { fn } = conditionWire;
-  // @ts-ignore It's not T anymore; the type has changed to `El | undefined`
-  conditionWire.fn = function when($) {
-    const cond = fn($);
-    if (cond !== condActive && views[cond]) {
-      // Tick. Pause wires and keep DOM intact
-      if (condActive) wirePause(activeWires[condActive] as Wire);
-      condActive = cond;
-      // Rendered/Active?
-      if (activeEls[cond]) {
-        // Then unpause. If no signals updated when paused the wire does nothing
-        (activeWires[cond] as Wire)();
+  const activeWires = {} as { [k in T]: Wire<void> };
+  let condRendered: T;
+  conditionWire.tasks.add((cond) => {
+    // XXX: I can't believe this has been broken for 8 months...
+    // https://github.com/heyheyhello/haptic/commit/45f1563d2c88933e6042c8495163cdf986e79817
+    if (cond === condRendered) return activeEls[cond];
+    condRendered = cond;
+    // Else, content is changing. Pause the current wires. Keep the DOM.
+    wirePause(activeWires[condRendered]);
+    // Have we rendered this new cond before? Then unpause the wire
+    if (activeEls[cond]) {
+      // Is it stale? Then run the wire
+      if (wireResume(activeWires[cond])) {
+        activeWires[cond]();
       }
-      // Able to render this DOM tree?
+    } else {
+      // Render the DOM tree from scratch and capture all nested wires
       const wireRoot = wire(() => {});
-      activeEls[cond] = wireAdopt(wireRoot, () => h(views[cond] as Component));
+      wireAdopt(wireRoot, () => activeEls[cond] = h(views[cond] as Component));
       activeWires[cond] = wireRoot;
     }
     return activeEls[cond];
-  };
+  });
   return conditionWire as unknown as Wire<El | undefined>;
 };
 

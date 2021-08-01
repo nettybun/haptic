@@ -13,7 +13,7 @@ throw without disrupting the system. To help debugging, meaningful function
 names are generated for both signals and wires and these show up naturally in
 developer tools, console.log, and error stacktraces.
 
-It's 876 bytes min+gzip on its own.
+It's 908 bytes min+gzip on its own.
 
 It's normal ESM and can be used by itself in any JS environment, no DOM needed.
 
@@ -76,15 +76,18 @@ Here are some features about wires:
     wire will throw.
 
   - They're finite-state-machines that can be reset, running, idle, paused, and
-    stale. They use the FSM state to stop infinite loops, skip runs when paused,
-    and resume work (if needed) when unpaused.
+    stale. They use the FSM state to stop infinite loops, skip being run when
+    paused or when part of a computed-signal, and knowing if they need to run
+    once they're resumed.
 
   - They keep track of how many times they've run. This is useful for profiling
     and debugging.
 
-  - The wire function `wire.fn` can be replaced. It may not seem immediately
-    useful, but this is how `api.patch` wires reactivity into the DOM and is
-    also why a single wire to be patched into multiple places in the DOM.
+  - The wire function has post-run tasks which are used to piggyback on a wire
+    run in a non-destructive way. It may not seem immediately useful, but this
+    is how `api.patch` wires reactivity into the DOM and is also why a single
+    wire to be patched into multiple places in the DOM. Computed-signals update
+    their stored values this way too.
 
   - In the rare case that a function (maybe third party) requires a "\$" token
     as a parameter but you don't want to consent to unknown subscriptions in
@@ -123,3 +126,41 @@ don't update anything; no one is subscribed.
 
 // TODO: Example of lazy execution where "expensive calculation" isn't run until
 necessary (when it's read by an effect wire)
+
+---
+
+## Nice principals about state
+
+- Reading a signal (pass-read) is always safe. There should be no reason to wish
+  you could snake around the function call by reading the stored value directly.
+  This is because Haptic is explicit and there's no accidental subscriptions.
+
+- Wires can always be manually run by calling them and this won't cause other
+  side-effects within the engine or trigger other chain reactions. It's safe to
+  debug by calling.
+
+- Similarly, its expected that people will try interacting with wires and
+  signals in the console. I try to make that debugging experience nice.
+
+- There's readable and consistent naming; no shorthand notations in code and
+  function properties. They also all have nice JSDoc comments for your editor.
+
+- Computed-signals are lazy and will do their best to avoid redoing work. They
+  don't even run when initialized.
+
+- Creating a computed-signal by writing an active/used wire into a signal
+  provides a _reasonable_ experience but I don't recommend it. The wire will
+  work as expected **until it is reset/unsubscribed by a subsequent write** to
+  which replaces the wire. I've prioritized having consistent signal behaviour
+  so writes _always_ write. I stop the wire so it doesn't keep running in the
+  void and never get garbage collected. I don't want to throw or complain that
+  the wire needs to be dealt with, so I default to resetting it. I understand
+  this doesn't make everyone happy. If you plan to ever convert a
+  computed-signal to a normal signal take care to re-run the wire if needed.
+
+## Concerns
+
+- Converting a computed-signal to a signal via write isn't very explicit. It
+  could be an accident. Is that OK? Depends what camp you're in. The "save the
+  wires" camp wants writes to not disturb the wire. The "signals are signals"
+  camp wants to maintain consistent write behaviour. Haptic does the latter.

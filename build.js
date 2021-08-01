@@ -11,11 +11,9 @@ const entryPoints = [
 
 // About 100 characters saved this way
 const define = {
-  FSM_RESET: 0,
-  FSM_RUNNING: 1,
-  FSM_WIRED_IDLE: 2,
-  FSM_WIRED_PAUSED: 3,
-  FSM_WIRED_STALE: 4,
+  S_RUNNING: 4,
+  S_SKIP_RUN_QUEUE: 2,
+  S_NEEDS_RUN: 1,
 };
 
 // This is explained in ./src/index.ts. Haptic's bundle entrypoint isn't a self

@@ -8,9 +8,7 @@ export { signal, wire } from './state/index.js';
   --bundle src/bundle.ts
   --format=esm
   --minify
-  --define:FSM_RESET=0
-  --define:FSM_RUNNING=1
-  --define:FSM_WIRED_IDLE=2
-  --define:FSM_WIRED_PAUSED=3
-  --define:FSM_WIRED_STALE=4 | gzip -9 | wc -c
+  --define:S_RUNNING=4
+  --define:S_SKIP_RUN_QUEUE=2
+  --define:S_NEEDS_RUN=1 | gzip -9 | wc -c
 */

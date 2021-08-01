@@ -20,18 +20,18 @@ type Signal<T = unknown> = {
 type Wire<T = unknown> = {
   /** Run the wire */
   (): T;
-  /** User-provided function to run */
-  fn: ($: SubToken) => T;
   /** Signals read-subscribed last run */
   sigRS: Set<Signal<X>>;
   /** Signals read-passed last run */
   sigRP: Set<Signal<X>>;
   /** Signals inherited from computed-signals, for consistent two-way linking */
   sigIC: Set<Signal<X>>;
+  /** Post-run tasks */
+  tasks: Set<(nextValue: T) => void>;
   /** Wires created during this run (children of this parent) */
   inner: Set<Wire<X>>;
-  /** FSM state: RESET|RUNNING|IDLE|PAUSED|STALE */
-  state: WireFSM;
+  /** FSM state 3-bit bitmask: [RUNNING][SKIP_RUN_QUEUE][NEEDS_RUN] */
+  state: WireState;
   /** Run count */
   run: number;
   /** If part of a computed signal, this is its signal */
@@ -51,12 +51,8 @@ type SubToken = {
   $$: 1;
 };
 
-type WireFSM =
-  | typeof FSM_RESET
-  | typeof FSM_RUNNING
-  | typeof FSM_WIRED_IDLE
-  | typeof FSM_WIRED_PAUSED
-  | typeof FSM_WIRED_STALE;
+/** 3 bits: [RUNNING][SKIP_RUN_QUEUE][NEEDS_RUN] */
+type WireState = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 /* eslint-disable no-multi-spaces */
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
@@ -74,11 +70,9 @@ let transactionCommit = false;
 
 // Symbol() doesn't gzip well. `[] as const` gzips best but isn't debuggable
 // without a lookup Map<> and other hacks.
-declare const FSM_RESET        = 0;
-declare const FSM_RUNNING      = 1;
-declare const FSM_WIRED_IDLE   = 2;
-declare const FSM_WIRED_PAUSED = 3;
-declare const FSM_WIRED_STALE  = 4;
+declare const S_RUNNING        = 0b100;
+declare const S_SKIP_RUN_QUEUE = 0b010;
+declare const S_NEEDS_RUN      = 0b001;
 
 /**
  * Void subcription token. Used when a function demands a token but you don't
@@ -100,40 +94,34 @@ const createWire = <T>(fn: ($: SubToken) => T): Wire<T> => {
   let saved: T;
   // @ts-ignore Missing properties right now but they're set in _initWire()
   const wire: Wire<T> = { [id]() {
-    if (wire.state === FSM_RUNNING) {
+    if (wire.state & S_RUNNING) {
       throw new Error(`Loop ${wire.name}`);
     }
-    // If FSM_PAUSED then FSM_STALE was never reached; nothing has changed.
-    // Restore state (below) and call inner wires so they can check
-    if (wire.state === FSM_WIRED_PAUSED) {
-      wire.inner.forEach((_wire) => { _wire(); });
-    } else {
-      // Symmetrically remove all connections between signals and wires. This is
-      // called "automatic memory management" in Sinuous/S.js
-      wireReset(wire);
-      wire.state = FSM_RUNNING;
-      saved = wireAdopt(wire, () => wire.fn($));
-      wire.run++;
-    }
-    wire.state = wire.sigRS.size
-      ? FSM_WIRED_IDLE
-      : FSM_RESET;
+    // Symmetrically remove all connections between signals and wires. This is
+    // called "automatic memory management" in Sinuous/S.js
+    wireReset(wire);
+    wire.state |= S_RUNNING;
+    saved = wireAdopt(wire, () => fn($));
+    wire.tasks.forEach((task) => task(saved));
+    wire.run++;
+    wire.state &= ~(S_RUNNING | S_NEEDS_RUN);
     return saved;
   } }[id];
-  wire.$wire = 1;
-  wire.fn = fn;
-  wire.run = 0;
   // @ts-ignore
   const $: SubToken = ((...sig) => sig.map((_sig) => _sig($)));
   $.$$ = 1;
   $.wire = wire;
   if (activeWire) activeWire.inner.add(wire);
+  wire.$wire = 1;
+  wire.run = 0;
+  // Outside of _initWire because this persists across wire resets
+  wire.tasks = new Set();
   _initWire(wire);
   return wire;
 };
 
 const _initWire = (wire: Wire<X>): void => {
-  wire.state = FSM_RESET;
+  wire.state = S_NEEDS_RUN;
   wire.inner = new Set();
   // Drop all signals now that they have been unlinked
   wire.sigRS = new Set();
@@ -147,23 +135,19 @@ const _runWires = (wires: Set<Wire<X>>): void => {
   const toRun = new Set(wires);
   // Mark upstream computeds as stale. Must be in an isolated for-loop
   toRun.forEach((wire) => {
-    // TODO: Test (#3). Also benchmark?
-
-    // If a wire's ancestor will run it'll destroy the children. Remove them.
-    // for (let p = wire.parent; p; p = p.parent) {
-    //   if (toRun.has(p)) { toRun.delete(wire); return; }
-    // }
-    // Equally: If a wire's child is in the list, remove the child...
-    wire.inner.forEach((ci) => toRun.delete(ci));
-    if (wire.state === FSM_WIRED_PAUSED || wire.cs) {
-      wire.state = FSM_WIRED_STALE;
+    if (wire.cs || wire.state & S_SKIP_RUN_QUEUE) {
+      toRun.delete(wire);
+      wire.state |= S_NEEDS_RUN;
     }
+    // TODO: Test (#3) + Benchmark
+    // If a wire's ancestor will run it'll destroy its children so remove them:
+    // for (let p = wire.parent; p; p = p.parent) {
+    //   if (toRun.has(p)) return toRun.delete(wire);
+    // }
+    // Equally: If a wire's child is in the list, remove it (smaller code):
+    wire.inner.forEach((ci) => toRun.delete(ci));
   });
-  toRun.forEach((wire) => {
-    // RESET|RUNNING|IDLE < PAUSED|STALE. Skips paused wires and lazy
-    // computed-signals. RESET wires shouldn't exist...
-    if (wire.state < FSM_WIRED_PAUSED) wire();
-  });
+  toRun.forEach((wire) => wire() as void);
 };
 
 /**
@@ -178,16 +162,27 @@ const wireReset = (wire: Wire<X>): void => {
 };
 
 /**
- * Pauses a wire. Trying to run the wire again will unpause; if no signals
- * were written during the pause then the run is skipped. */
-const wirePause = (wire: Wire<X>) => {
-  wire.state = FSM_WIRED_PAUSED;
+ * Pauses a wire so signal writes won't cause runs. Affects nested wires */
+const wirePause = (wire: Wire<X>): void => {
   wire.inner.forEach(wirePause);
+  wire.state |= S_SKIP_RUN_QUEUE;
+};
+
+/**
+ * Resumes a paused wire. Affects nested wires but skips wires belonging to
+ * computed-signals. Returns true if any runs were missed during the pause */
+const wireResume = (wire: Wire<X>): boolean => {
+  wire.inner.forEach(wireResume);
+  // Clears SKIP_RUN_QUEUE only if it's NOT a computed-signal
+  if (!wire.cs) wire.state &= ~S_SKIP_RUN_QUEUE;
+  // eslint-disable-next-line no-implicit-coercion
+  return !!(wire.state & S_NEEDS_RUN);
 };
 
 const signalBase = <T>(value: T, id = ''): Signal<T> => {
-  type C = Wire<X>;
+  type W = Wire<X>;
   let saved: unknown;
+  let cwTask: ((value: unknown) => void) | undefined;
   // Multi-use temp variable
   let read: unknown = `signal|${signalId++}{${id}}`;
   const signal = { [read as string](...args: [$?: SubToken, ..._: unknown[]]) {
@@ -205,25 +200,26 @@ const signalBase = <T>(value: T, id = ''): Signal<T> => {
     // Case: Read-Subscribe. Marks the wire registered in `$` as a reader
     // This could be different than the actively running wire, but shouldn't be
     else if ((read = args[0] && (args[0] as P<SubToken>).$$ && args[0].wire)) {
-      if ((read as C).sigRP.has(signal)) {
-        throw new Error(`${(read as C).name} mixes sig($) & sig()`);
+      if ((read as W).sigRP.has(signal)) {
+        throw new Error(`${(read as W).name} mixes sig($) & sig()`);
       }
       // Two-way link. Signal writes will now call/update wire C
-      (read as C).sigRS.add(signal);
-      signal.wires.add((read as C));
+      (read as W).sigRS.add(signal);
+      signal.wires.add((read as W));
 
-      // Computed-signals (signals holding a wire; signal.cw) can't only run C
-      // when written to, they also need to run C when cw is marked stale. How
-      // do we know when that happens? It'll be when one of cw.sigRS signals
-      // calls cw. So, link this `read` wire to each cw.sigRS call list; it'll
-      // be called as collateral.
+      // Computed-signals can't only run C when written to, they also need to
+      // run C when signal.cw is marked stale. How do we know when that happens?
+      // It's when a cw.sigRS signal tries to call signal.cw. So adding `read`
+      // to each signal in cw.sigRS will call C as collateral.
       if (signal.cw) {
+        // Run early if sigRS isn't ready (see "Update if needed" line below)
+        if (signal.cw.state & S_NEEDS_RUN) signal.cw();
         signal.cw.sigRS.forEach((_signal) => {
           // Linking _must_ be two-way. From signal.wires to wire.sigXYZ. Until
           // now it's always either sigRP or sigRP, but if we use those we'll
           // break the mix error checking (above). So use a new list, sigIC.
-          (read as C).sigIC.add(_signal);
-          _signal.wires.add((read as C));
+          (read as W).sigIC.add(_signal);
+          _signal.wires.add((read as W));
         });
       }
     }
@@ -237,24 +233,27 @@ const signalBase = <T>(value: T, id = ''): Signal<T> => {
       }
       // If overwriting a computed-signal wire, unsubscribe the wire
       if (signal.cw) {
+        signal.cw.tasks.delete(cwTask as () => void);
         wireReset(signal.cw);
-        delete signal.cw.cs; // Part of unsubscribing/cleaning the wire
+        delete signal.cw.cs;
         delete signal.cw;
+        // cwTask = undefined;
       }
       saved = args[0] as unknown as T;
       // If writing a wire, this signal becomes as a computed-signal
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (saved && (saved as Wire).$wire) {
-        (saved as C).cs = signal;
-        (saved as C).state = FSM_WIRED_STALE;
-        signal.cw = saved as C;
+      if (saved && (saved as P<Wire>).$wire) {
+        (saved as W).cs = signal;
+        (saved as W).state |= S_SKIP_RUN_QUEUE;
+        (saved as W).tasks.add(cwTask = (value) => saved = value);
+        signal.cw = saved as W;
+        // saved = undefined;
       }
       // Notify every write _unless_ this is a post-transaction commit
-      if (!transactionCommit && signal.wires.size) _runWires(signal.wires);
+      if (!transactionCommit) _runWires(signal.wires);
     }
     if (read) {
-      // Re-run the wire to get a new value if needed
-      if (signal.cw && signal.cw.state === FSM_WIRED_STALE) saved = signal.cw();
+      // Update if needed
+      if (signal.cw && signal.cw.state & S_NEEDS_RUN) signal.cw();
       return saved;
     }
   } }[read as string] as Signal<T>;
@@ -340,6 +339,7 @@ export {
   createWire as wire,
   wireReset,
   wirePause,
+  wireResume,
   wireAdopt,
   transaction,
   v$ // Actual subtokens are only ever provided by a wire
