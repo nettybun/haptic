@@ -30,9 +30,8 @@ api.patch = (value, patchDOM) => {
   // I like type fields that use 1 instead of true/false, so convert via `!!`
   // eslint-disable-next-line no-implicit-coercion
   const $wire = (value && !!(value as Wire).$wire) as boolean;
-  const { fn } = value as Wire;
   if ($wire && patchDOM) {
-    (value as Wire).fn = ($) => patchDOM(fn($));
+    (value as Wire).tasks.add(patchDOM);
     (value as Wire)();
   }
   return $wire;
