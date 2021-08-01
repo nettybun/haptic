@@ -28,8 +28,10 @@ type Wire<T = unknown> = {
   sigIC: Set<Signal<X>>;
   /** Post-run tasks */
   tasks: Set<(nextValue: T) => void>;
+  /** Wire that created this wire (parent of this child) */
+  upper: Wire<X> | undefined;
   /** Wires created during this run (children of this parent) */
-  inner: Set<Wire<X>>;
+  lower: Set<Wire<X>>;
   /** FSM state 3-bit bitmask: [RUNNING][SKIP_RUN_QUEUE][NEEDS_RUN] */
   state: WireState;
   /** Run count */
@@ -101,7 +103,7 @@ const createWire = <T>(fn: ($: SubToken) => T): Wire<T> => {
     // called "automatic memory management" in Sinuous/S.js
     wireReset(wire);
     wire.state |= S_RUNNING;
-    saved = wireAdopt(wire, () => fn($));
+    wireAdopt(wire, () => saved = fn($));
     wire.tasks.forEach((task) => task(saved));
     wire.run++;
     wire.state &= ~(S_RUNNING | S_NEEDS_RUN);
@@ -111,18 +113,19 @@ const createWire = <T>(fn: ($: SubToken) => T): Wire<T> => {
   const $: SubToken = ((...sig) => sig.map((_sig) => _sig($)));
   $.$$ = 1;
   $.wire = wire;
-  if (activeWire) activeWire.inner.add(wire);
+  if (activeWire) activeWire.lower.add(wire);
+  wire.upper = activeWire;
+  wire.tasks = new Set();
   wire.$wire = 1;
   wire.run = 0;
   // Outside of _initWire because this persists across wire resets
-  wire.tasks = new Set();
   _initWire(wire);
   return wire;
 };
 
 const _initWire = (wire: Wire<X>): void => {
   wire.state = S_NEEDS_RUN;
-  wire.inner = new Set();
+  wire.lower = new Set();
   // Drop all signals now that they have been unlinked
   wire.sigRS = new Set();
   wire.sigRP = new Set();
@@ -133,19 +136,18 @@ const _runWires = (wires: Set<Wire<X>>): void => {
   // Use a new Set() to avoid infinite loops caused by wires writing to signals
   // during their run.
   const toRun = new Set(wires);
+  let curr: Wire<X> | undefined;
   // Mark upstream computeds as stale. Must be in an isolated for-loop
   toRun.forEach((wire) => {
     if (wire.cs || wire.state & S_SKIP_RUN_QUEUE) {
       toRun.delete(wire);
       wire.state |= S_NEEDS_RUN;
     }
-    // TODO: Test (#3) + Benchmark
+    // TODO: Test (#3) + Benchmark with main branch
     // If a wire's ancestor will run it'll destroy its children so remove them:
-    // for (let p = wire.parent; p; p = p.parent) {
-    //   if (toRun.has(p)) return toRun.delete(wire);
-    // }
-    // Equally: If a wire's child is in the list, remove it (smaller code):
-    wire.inner.forEach((ci) => toRun.delete(ci));
+    curr = wire;
+    while ((curr = curr.upper))
+      if (toRun.has(curr)) return toRun.delete(wire);
   });
   toRun.forEach((wire) => wire() as void);
 };
@@ -154,17 +156,16 @@ const _runWires = (wires: Set<Wire<X>>): void => {
  * Removes two-way subscriptions between its signals and itself. This also turns
  * off the wire until it is manually re-run. */
 const wireReset = (wire: Wire<X>): void => {
-  const unlinkFromSignal = (signal: Signal<X>) => signal.wires.delete(wire);
-  wire.inner.forEach(wireReset);
-  wire.sigRS.forEach(unlinkFromSignal);
-  wire.sigIC.forEach(unlinkFromSignal);
+  wire.lower.forEach(wireReset);
+  wire.sigRS.forEach((signal) => signal.wires.delete(wire));
+  wire.sigIC.forEach((signal) => signal.wires.delete(wire));
   _initWire(wire);
 };
 
 /**
  * Pauses a wire so signal writes won't cause runs. Affects nested wires */
 const wirePause = (wire: Wire<X>): void => {
-  wire.inner.forEach(wirePause);
+  wire.lower.forEach(wirePause);
   wire.state |= S_SKIP_RUN_QUEUE;
 };
 
@@ -172,7 +173,7 @@ const wirePause = (wire: Wire<X>): void => {
  * Resumes a paused wire. Affects nested wires but skips wires belonging to
  * computed-signals. Returns true if any runs were missed during the pause */
 const wireResume = (wire: Wire<X>): boolean => {
-  wire.inner.forEach(wireResume);
+  wire.lower.forEach(wireResume);
   // Clears SKIP_RUN_QUEUE only if it's NOT a computed-signal
   if (!wire.cs) wire.state &= ~S_SKIP_RUN_QUEUE;
   // eslint-disable-next-line no-implicit-coercion
@@ -318,19 +319,18 @@ const transaction = <T>(fn: () => T): T => {
  * Run a function within the context of a wire. Nested children wires are
  * adopted (see wire.inner). Also affects signal read consistency checks for
  * read-pass (signal.sigRP) and read-subscribe (signal.sigRS). */
-const wireAdopt = <T>(wire: Wire<X>, fn: () => T): T => {
+const wireAdopt = <T>(wire: Wire<X>, fn: () => T): void => {
   const prev = activeWire;
   activeWire = wire;
   let error: unknown;
-  let ret: unknown;
+  // Note: Can't use try+finally it swallows the error instead of throwing
   try {
-    ret = fn();
+    fn();
   } catch (err) {
     error = err;
   }
   activeWire = prev;
   if (error) throw error;
-  return ret as T;
 };
 
 export {
