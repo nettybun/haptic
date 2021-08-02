@@ -1,0 +1,28 @@
+{
+  "vars": {
+    "props": {
+      "$svg": "t",
+      "$api": "e",
+      "$h2": "n",
+      "$activeWire": "r",
+      "$transactionSignals": "s",
+      "$wireId": "a",
+      "$signalId": "w",
+      "$transactionCommit": "i",
+      "$v$": "c",
+      "$createWire": "o",
+      "$_initWire": "d",
+      "$_runWires": "f",
+      "$wireReset": "l",
+      "$wirePause": "h",
+      "$wireResume": "g",
+      "$signalBase": "$",
+      "$createSignal": "E",
+      "$transaction": "S",
+      "$wireAdopt": "u",
+      "$h": "m",
+      "$wire": "p",
+      "$when": "k"
+    }
+  }
+}
