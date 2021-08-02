@@ -1,6 +1,6 @@
 import esbuild from 'esbuild';
-import { gzip } from 'fflate';
-import { readFile, writeFile } from 'fs/promises';
+import { gzipSync } from 'fflate';
+import { readFileSync, writeFileSync } from 'fs';
 
 const entryPoints = [
   'src/dom/index.ts',
@@ -42,33 +42,22 @@ esbuild.build({
   minify: true,
   metafile: true,
   define,
-}).then((build) => Promise.all(
-  Object.keys(build.metafile.outputs)
-    .filter((filePath) => !filePath.endsWith('.map'))
-    .map(async (file) => {
-      const readDataFull = await readFile(file);
-      const sourceComment = '\n//# sourceMappingURL=index.js.map';
-      const indexEndOfCode = readDataFull.length - sourceComment.length;
-      const sizes = { file, min: 0, mingz: 0 };
-      const readData = readDataFull.subarray(0, indexEndOfCode);
-      sizes.min = readData.length;
-      await new Promise((res, rej) => {
-        gzip(readData, { consume: true, level: 9 }, (err, data) => {
-          if (err) rej(err);
-          sizes.mingz = data.length;
-          // Emit the .gz file so webservers can serve that directly
-          writeFile(file + '.gz', data);
-          res(data);
-        });
-      });
-      return sizes;
-    })
-)).then((sizeObjects) => {
-  sizeObjects.forEach(({ file, min, mingz }) => {
-    file = file.replace('publish/', '');
+
+}).then(async (build) => {
+  // All bundles are "index.js" so far
+  const sourceComment = '\n//# sourceMappingURL=index.js.map';
+  const pad = (x, n) => String(x).padEnd(n);
+
+  // Using buildResult.outputFiles would skip needing to read the file
+  for (const file of Object.keys(build.metafile.outputs)) {
+    if (file.endsWith('.map')) continue;
+    const min = readFileSync(file).subarray(0, -sourceComment.length);
+    const mingz = gzipSync(min, { consume: false, level: 9 });
+    writeFileSync(file + '.gz', mingz);
+    const name = file.replace('publish/', '');
     console.log(
-      `${file.padEnd(15)} min:${String(min).padEnd(5)} min+gzip:${mingz}`);
-  });
+      `${pad(name, 15)} min:${pad(min.length, 5)} min+gzip:${mingz.length}`);
+  }
 }).catch((err) => {
   console.error('ESM', err);
   process.exit(1);
