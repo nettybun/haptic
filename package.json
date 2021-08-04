@@ -50,9 +50,9 @@
     "esbuild-node-loader": "^0.1.1",
     "eslint": "^7.32.0",
     "eslint-plugin-react": "^7.24.0",
-    "fdir": "^5.1.0",
     "fflate": "^0.7.1",
     "typescript": "^4.3.5",
-    "zora": "^5.0.0-alpha.3"
+    "zora": "^5.0.0",
+    "zora-reporters": "^1.0.0"
   }
 }
