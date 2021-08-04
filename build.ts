@@ -1,4 +1,5 @@
-import esbuild from 'esbuild';
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+import * as esbuild from 'esbuild';
 import { gzipSync } from 'fflate';
 import { readFileSync, writeFileSync } from 'fs';
 
@@ -9,23 +10,23 @@ const entryPoints = [
   'src/index.ts',
 ];
 
-// About 100 characters saved this way
+// About 100 characters saved this way. Strings of JS code, so numbers.
 const define = {
-  S_RUNNING: 4,
-  S_SKIP_RUN_QUEUE: 2,
-  S_NEEDS_RUN: 1,
+  S_RUNNING: '4',
+  S_SKIP_RUN_QUEUE: '2',
+  S_NEEDS_RUN: '1',
 };
 
 // This is explained in ./src/index.ts. Haptic's bundle entrypoint isn't a self
 // contained bundle. This is to support unbundled developement workflows that
 // are ESM-only. For production, your bundler can re-bundle it.
-const externalPlugin = {
+const externalPlugin: esbuild.Plugin = {
   name: 'external',
   setup(build) {
     build.onResolve({ filter: /\.\/(dom|state)/ }, (args) => {
-      const [, name] = args.path.match(/(dom|state)/);
+      const [, name] = /(dom|state)/.exec(args.path)!;
       // console.log(args, name);
-      return { path: `haptic/${name}`, external: true };
+      return { path: `haptic/${name!}`, external: true };
     });
   },
 };
@@ -42,17 +43,16 @@ esbuild.build({
   minify: true,
   metafile: true,
   define,
-
-}).then(async (build) => {
+}).then((build) => {
   // All bundles are "index.js" so far
   const sourceComment = '\n//# sourceMappingURL=index.js.map';
-  const pad = (x, n) => String(x).padEnd(n);
+  const pad = (x: unknown, n: number) => String(x).padEnd(n);
 
   // Using buildResult.outputFiles would skip needing to read the file
-  for (const file of Object.keys(build.metafile.outputs)) {
+  for (const file of Object.keys(build.metafile!.outputs)) {
     if (file.endsWith('.map')) continue;
     const min = readFileSync(file).subarray(0, -sourceComment.length);
-    const mingz = gzipSync(min, { consume: false, level: 9 });
+    const mingz = gzipSync(min, { level: 9 });
     writeFileSync(file + '.gz', mingz);
     const name = file.replace('publish/', '');
     console.log(
