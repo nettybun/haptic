@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
+// These can't be *.js with the Node loader. Use package names once published
 import { signal, wire } from '../src/state/index';
 import type { Signal, Wire } from '../src/state/index';
 

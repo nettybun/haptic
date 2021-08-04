@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-
 import { watch } from 'fs';
 import { fileURLToPath } from 'url';
 import type { ChildProcess } from 'child_process';
@@ -52,7 +50,6 @@ if (isTestExecutorProcess) {
 
   const reload = () => {
     if (child) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       ac!.abort();
     }
     ac = new AbortController();

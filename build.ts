@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as esbuild from 'esbuild';
 import { gzipSync } from 'fflate';
 import { readFileSync, writeFileSync } from 'fs';

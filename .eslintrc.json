@@ -51,6 +51,17 @@
         "tsconfigRootDir": "./",
         "project": "./tsconfig.json"
       }
+    },
+    {
+      "files": [
+        "./build.ts",
+        "./test.ts",
+        "**/*.test.ts"
+      ],
+      "rules": {
+        "@typescript-eslint/restrict-template-expressions": "off",
+        "@typescript-eslint/no-non-null-assertion": "off"
+      }
     }
   ],
   "env": {
