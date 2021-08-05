@@ -1,4 +1,12 @@
 node_modules
-publish
+publish/*
+publish/dom/*
+publish/state/*
+publish/stdlib/*
+!publish/dom/
+!publish/state/
+!publish/stdlib/
+!publish/**/index.d.ts
+!publish/jsx.d.ts
 *.map
 .vscode
