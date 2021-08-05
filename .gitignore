@@ -8,5 +8,6 @@ publish/stdlib/*
 !publish/stdlib/
 !publish/**/index.d.ts
 !publish/jsx.d.ts
+!publish/package.json
 *.map
 .vscode

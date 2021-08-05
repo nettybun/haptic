@@ -1,0 +1,39 @@
+{
+  "name": "haptic",
+  "version": "0.10.0",
+  "description": "Reactive TSX library in 1.6kb with no compiler, no magic, and no virtual DOM.",
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "author": "Gen Hames",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.cjs"
+    },
+    "./dom": {
+      "import": "./dom/index.js",
+      "require": "./dom/index.cjs"
+    },
+    "./state": {
+      "import": "./state/index.js",
+      "require": "./state/index.cjs"
+    },
+    "./stdlib": {
+      "import": "./stdlib/index.js",
+      "require": "./stdlib/index.cjs"
+    }
+  },
+  "keywords": [
+    "reactive",
+    "dom",
+    "tsx",
+    "frontend",
+    "framework"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/heyheyhello/haptic"
+  }
+}
