@@ -1,6 +1,5 @@
+import { Worker, isMainThread, workerData } from 'worker_threads';
 import { watch } from 'fs';
-import { fileURLToPath } from 'url';
-import type { ChildProcess } from 'child_process';
 
 // Usage: `node test ./test/**` which expands to full relative paths via shell
 
@@ -9,69 +8,49 @@ import type { ChildProcess } from 'child_process';
 // - Using `fs.readdir(TEST_DIR)` paired with CLI substring filters. Ditto.
 // - Using `vm.createScript` and `vm.runInNewContext` since ESM doesn't have a
 //   replacement for `delete require.cache[name]` and reload a module. Insanely
-//   complicated and experimental for ESM. No bueno. Just full process fork...
+//   complicated and experimental for ESM. No bueno.
+// - Spawn a Node process and use AbortController: #95f9b198ae19
 
-// Experimental loader enables this by side-stepping
-const __filename = fileURLToPath(import.meta.url);
+if (isMainThread) {
+  const args = process.argv.slice(2);
+  const options: string[] = [];
+  const files: string[] = [];
 
-const args = process.argv.slice(2);
-const options: string[] = [];
-const files: string[] = [];
+  for (const arg of args) {
+    if (arg.startsWith('--')) options.push(arg);
+    else files.push(arg);
+  }
 
-for (const arg of args) {
-  if (arg.startsWith('--')) options.push(arg);
-  else files.push(arg);
-}
-const isTestExecutorProcess = files[0] === 'run' && files.shift();
+  if (files.length === 0) {
+    console.log('No test files specified');
+    process.exit(1);
+  }
 
-if (files.length === 0) {
-  console.log('No test files specified');
-  process.exit(1);
-}
-
-if (isTestExecutorProcess) {
-  console.log(`Testing ${files.join(', ')}`);
-  const { hold, report } = await import('zora');
-  hold();
-  const { createDiffReporter } = await import('zora-reporters');
-  await Promise.all(
-    files.map((file) => {
-      // Automatic transform handled by esbuild-node-loader ✨
-      return import(file);
-    })
-  );
-  await report({
-    reporter: createDiffReporter(),
-  });
-} else {
-  const { spawn } = await import('child_process');
-  let ac: AbortController | undefined;
-  let child: ChildProcess | undefined;
+  const watchMode = options.includes('--watch');
+  // Automatic transform handled by esbuild-node-loader ✨
+  const workerUrl = new URL(`data:text/javascript,import('${import.meta.url}');`);
+  let worker: Worker | undefined;
 
   const reload = () => {
-    if (child) {
-      ac!.abort();
+    if (worker) {
+      void worker.terminate();
     }
-    ac = new AbortController();
-    child = spawn('node', [
-      '--experimental-loader', 'esbuild-node-loader',
-      __filename, 'run', ...files,
-    ], {
-      signal: ac.signal,
-      stdio: [ 'ignore', 'inherit', 'inherit' ],
+    worker = new Worker(workerUrl, { workerData: files });
+    worker.on('online', () => {
+      console.log('Worker started');
     });
-    child.on('spawn', () => {
-      console.log(`Runner started. PID ${child!.pid!}`);
+    worker.on('error', (err) => {
+      console.log(`Worker error ❌ ${err}`);
     });
-    child.on('close', (code) => {
-      console.log(`Runner stopped. PID ${child!.pid!}. Exit code: ${code!}`);
-      console.log('Waiting to reload...');
+    worker.on('exit', (exitCode) => {
+      if (exitCode === 0) console.log('Worker exit OK');
+      if (watchMode) console.log('Waiting for reload...');
     });
   };
 
   let debounceTimer: NodeJS.Timeout | undefined;
-  if (options.includes('--watch')) {
-    console.log('Watching for test file changes');
+  if (watchMode) {
+    console.log('Watching for changes');
     for (const file of files) {
       watch(file, (eventName) => {
         console.log(`Watch ${file} event ${eventName}`);
@@ -81,13 +60,26 @@ if (isTestExecutorProcess) {
         }, 500);
       });
     }
+    process.stdin.on('data', (chunk) => {
+      const text = chunk.toString();
+      if (text === 're\n' || text === 'reload\n') {
+        console.log('Manual reload');
+        reload();
+      }
+    });
   }
-  process.stdin.on('data', (chunk) => {
-    const text = chunk.toString();
-    if (text === 're\n' || text === 'reload\n') {
-      console.log('Manual reload');
-      reload();
-    }
-  });
   reload();
+} else {
+  // Colours in TTY
+  process.stdout.isTTY = true;
+  process.stderr.isTTY = true;
+
+  const files = workerData as string[];
+  console.log(`Testing ${files.join(', ')}`);
+  const { hold, report } = await import('zora');
+  hold();
+  const { createDiffReporter } = await import('zora-reporters');
+  // Automatic transform handled by esbuild-node-loader ✨
+  await Promise.all(files.map((file) => import(file)));
+  await report({ reporter: createDiffReporter() });
 }
