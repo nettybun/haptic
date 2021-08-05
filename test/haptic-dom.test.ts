@@ -1,1 +1,5 @@
-console.log('Test haptic-dom.test.ts');
+import { test } from 'zora';
+
+void test('hello from zora', ({ ok }) => {
+  ok(true, 'it worked');
+});
