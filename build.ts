@@ -1,6 +1,6 @@
 import * as esbuild from 'esbuild';
 import { gzipSync } from 'fflate';
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync } from 'fs';
 
 const entryPoints = [
   'src/dom/index.ts',
@@ -52,7 +52,6 @@ esbuild.build({
     if (file.endsWith('.map')) continue;
     const min = readFileSync(file).subarray(0, -sourceComment.length);
     const mingz = gzipSync(min, { level: 9 });
-    writeFileSync(file + '.gz', mingz);
     const name = file.replace('publish/', '');
     console.log(
       `${pad(name, 15)} min:${pad(min.length, 5)} min+gzip:${mingz.length}`);
@@ -72,6 +71,7 @@ esbuild.build({
   ],
   format: 'cjs',
   bundle: true,
+  sourcemap: true,
   minify: true,
   define,
 }).catch((err) => {

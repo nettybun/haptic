@@ -13,6 +13,9 @@
     "importsNotUsedAsValues": "error",
   },
   "include": [
-    "src"
+    "src",
+    "test",
+    "build.ts",
+    "test.ts",
   ]
 }
