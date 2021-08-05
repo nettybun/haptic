@@ -2,10 +2,9 @@ import { h } from '../dom/index.js';
 import { wire, wireAdopt, wirePause, wireResume } from '../state/index.js';
 
 import type { Wire } from '../state/index.js';
+import type { El, Component } from '../dom/index.js';
 
-// TODO: Export types (#11)
-type El = Element | Node | DocumentFragment;
-type Component = (...args: unknown[]) => El;
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 /** Switches DOM content when signals of the condition wire are written to */
 const when = <T extends string>(

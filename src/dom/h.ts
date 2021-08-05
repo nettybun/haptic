@@ -55,6 +55,7 @@ function h(tag: Tag, ...args: unknown[]): El | undefined {
 }
 
 export { h };
+export type { Component, El, Tag };
 
 // JSX namespace must be bound into a function() next to its definition
 declare namespace h {

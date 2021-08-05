@@ -7,6 +7,8 @@ import { remove } from './nodeRemove.js';
 
 import { svg } from './svg.js';
 
+import type { Component, El, Tag } from './h.js';
+
 // This API should be compatible with community libraries that extend Sinuous
 const api: {
   /** Hyperscript reviver */
@@ -43,3 +45,4 @@ const api: {
 const h: typeof _h = (...args) => api.h(...args);
 
 export { api, h, svg };
+export type { Component, El, Tag };
