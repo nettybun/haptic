@@ -37,16 +37,13 @@ const Page = () =>
 document.body.appendChild(<Page/>);
 ```
 
-The reason Haptic is small, explicit, and modest is because it was born out of
-JavaScript Fatigue. It runs in vanilla JS environments and renders using the
-DOM. It embraces the web.
+Haptic is small and explicit because it was born out of JavaScript Fatigue. It
+runs in vanilla JS environments and renders using the DOM. Embrace the modern
+web; step away from compilers, customs DSLs, and DOM diffing.
 
-The barrier to entry in web development is so high because we're drowning in the
-over-engineering of our own tools.
-
-This is a step away from compilers, customs DSLs, and DOM diffing.
-
-Instead, Haptic focuses on a modern and reliable developer experience:
+Developers often drown in the over-engineering of their own tools, raising the
+barrier to entry for new developers and wasting time. Instead, Haptic focuses on
+a modern and reliable developer experience:
 
 - __Writing in the editor__ leverages TypeScript to provide strong type feedback
   and verify code before it's even run. JSDoc comments also supply documentation
@@ -54,9 +51,9 @@ Instead, Haptic focuses on a modern and reliable developer experience:
 
 - __Testing at runtime__ behaves as you'd expect; a div is a div. It's also
   nicely debuggable with good error messages and by promoting code styles that
-  naturally name things in ways that are displayed in console logs and
-  stacktraces. It's subtle, but it's especially helpful for reviewing reactive
-  subscriptions. You'll thank me later.
+  naturally name items in ways that show up in console logs and stacktraces.
+  It's subtle, but it's especially helpful for reviewing reactive subscriptions.
+  You'll thank me later.
 
 - __Optimizing code__ is something you can do by hand. Haptic let's you write
   modern reactive web apps and still understand every part of the code. You
@@ -76,10 +73,10 @@ https://unpkg.com/haptic?module for an unbundled ESM script.
 ## Packages
 
 Haptic is a small collection of packages. This keeps things lightweight and
-helps you only use what you'd like. Each package can be used on its own.
+helps you only import what you'd like. Each package can be used on its own.
 
-The `haptic` package is simply a version of `haptic/dom` configured to use
-`haptic/state` for reactivity.
+The `haptic` package is simply a wrapper of `haptic/dom` that's configured to
+use `haptic/state` for reactivity; it's really only 150 characters minified.
 
 Rendering is handled in `haptic/dom` and supports any reactive library including
 none at all. Reactivity and state is provided by `haptic/state`. Framework
