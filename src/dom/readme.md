@@ -96,7 +96,7 @@ api.add: [<p>, <em>]
 api.add: [<p>, "..."]
 ```
 
-## `svg(closure: () => Node))`
+## `svg(closure: () => Node)): El | undefined`
 
 Tells Haptic's reviver to create SVG namespaced DOM elements for the duration of
 the closure. This means it uses `document.createElementNS` instead of the usual

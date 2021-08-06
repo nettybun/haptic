@@ -3,7 +3,7 @@
 Reactive web rendering in TSX with no virtual DOM, no compilers, no
 dependencies, and no magic.
 
-It's under 1600 bytes min+gz.
+It's less than 1600 bytes min+gz.
 
 ```tsx
 import { h } from 'haptic';
@@ -18,7 +18,7 @@ const state = signal({
 const Page = () =>
   <div>
     <h1>"{wire(state.text)}"</h1>
-    <p>You've typed {wire($ => state.text().length)} characters</p>
+    <p>You've typed {wire($ => state.text($).length)} characters</p>
     <input
       placeholder='Type here!'
       value={wire(state.text)}
@@ -27,8 +27,8 @@ const Page = () =>
     <button onClick={() => state.count(state.count() + 1)}>
       +1
     </button>
-    <p>After {wire($ => 5 - state.count($))} clicks the content will change</p>
-    {when(wire($ => state.count($) >= 5 ? "T" : "F"), {
+    <p>In {wire($ => 5 - state.count($))} clicks the content will change</p>
+    {when($ => state.count($) > 5 ? "T" : "F", {
       T: () => <strong>There are over 5 clicks!</strong>,
       F: () => <p>Clicks: {wire(state.count)}</p>,
     })}

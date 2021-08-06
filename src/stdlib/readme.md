@@ -11,7 +11,8 @@ having `when()` as a function.
 
 Implemented, though not necessarily right here:
 
-  - Switch DOM content efficiently via `when()`: ./when.ts.
+  - Switch DOM content efficiently via `when()`. It does caching of DOM nodes
+    and pauses any wires that go "off-screen".
 
   - Lifecycle hooks for `onAttach` and `onDetach` component mounting:
     https://github.com/heyheyhello/sinuous-packages/tree/work/sinuous-lifecycle
@@ -22,12 +23,12 @@ Implemented, though not necessarily right here:
 
 Again, these will be implemented as necessary...
 
-## `when(conditionWire: Wire<T>, views: { [key: T]: () => Node })`
+## `when<T>(condition: ($: SubToken) => T, views: { [key: T]: () => El }): Wire<El | undefined>`
 
-Matches `conditionWire`'s value to an object key in `views` in order to render
-DOM content. Useful when the wire returns a nice value such as "T"/"F" shown
-below. When a view is unrendered, all its nested wires are paused so the view
-doesn't update off screen. The DOM is still cached and held in memory, however.
+Uses `condition` function to build and return a wire. This wire matches the
+output of the condition to a key in `views` to return DOM content. Try returning
+readable values such as "T"/"F" as shown below. When a view is unrendered, all
+its nested wires are paused so the view doesn't keep updating in the background.
 
 Usage:
 
@@ -47,7 +48,7 @@ const Page = () =>
     <button onClick={data.count(data.count() + 1)}>
       Increment to {wire(data.countNext)}
     </button>
-    {when(wire($ => data.count($) > 5 ? "T" : "F"), {
+    {when($ => data.count($) > 5 ? "T" : "F", {
       T: () => <p>There have been more than 5 clicks</p>,
       F: () => <p>Current click count is {wire(data.count)}</p>,
     })}
@@ -55,3 +56,6 @@ const Page = () =>
 
 document.body.appendChild(<Page/>);
 ```
+
+When it says "There have been more than 5 clicks" the `wire(data.count)` wire
+won't run anymore even when `data.count` is being written to.
