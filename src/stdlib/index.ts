@@ -1,8 +1,8 @@
-import { h } from '../dom/index.js';
-import { wire, wireAdopt, wirePause, wireResume } from '../state/index.js';
+import { h } from 'haptic/dom';
+import { wire, wireAdopt, wirePause, wireResume } from 'haptic/state';
 
-import type { Wire } from '../state/index.js';
-import type { El, Component } from '../dom/index.js';
+import type { Wire, SubToken } from 'haptic/state';
+import type { El } from 'haptic/dom';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 

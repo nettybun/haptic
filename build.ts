@@ -19,23 +19,17 @@ const define = {
 // This is explained in ./src/index.ts. Haptic's bundle entrypoint isn't a self
 // contained bundle. This is to support unbundled developement workflows that
 // are ESM-only. For production, your bundler can re-bundle it.
-const externalPlugin: esbuild.Plugin = {
-  name: 'external',
-  setup(build) {
-    build.onResolve({ filter: /\.\/(dom|state)/ }, (args) => {
-      const [, name] = /(dom|state)/.exec(args.path)!;
-      // console.log(args, name);
-      return { path: `haptic/${name!}`, external: true };
-    });
-  },
-};
+const external = [
+  'haptic',
+  'haptic/dom',
+  'haptic/state',
+  'haptic/stdlib',
+];
 
 esbuild.build({
   entryPoints,
   outdir: 'publish',
-  plugins: [
-    externalPlugin,
-  ],
+  external,
   format: 'esm',
   bundle: true,
   sourcemap: true,
@@ -66,9 +60,7 @@ esbuild.build({
   entryPoints,
   outdir: 'publish',
   outExtension: { '.js': '.cjs' },
-  plugins: [
-    externalPlugin,
-  ],
+  external,
   format: 'cjs',
   bundle: true,
   sourcemap: true,

@@ -11,6 +11,21 @@
     "jsx": "preserve",
     "jsxFactory": "h",
     "importsNotUsedAsValues": "error",
+    "baseUrl": ".",
+    "paths": {
+      "haptic": [
+        "./src/index.ts"
+      ],
+      "haptic/dom": [
+        "./src/dom/index.ts"
+      ],
+      "haptic/state": [
+        "./src/state/index.ts"
+      ],
+      "haptic/stdlib": [
+        "./src/stdlib/index.ts"
+      ]
+    }
   },
   "include": [
     "src",

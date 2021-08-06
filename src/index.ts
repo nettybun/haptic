@@ -17,9 +17,10 @@
 // Higher-level features such as control flow, lifecycles, and context are
 // available in haptic/stdlib
 
-import { api, h, svg } from './dom/index.js';
+import { api, h, svg } from 'haptic/dom';
 
-import type { Wire } from './state/index.js';
+import type { Component, El, Tag } from 'haptic/dom';
+import type { Wire } from 'haptic/state';
 import type { GenericEventAttrs, HTMLAttrs, SVGAttrs, HTMLElements, SVGElements } from './jsx';
 
 // When publishing swap out api.h for the correct JSX namespace in index.d.ts
@@ -38,6 +39,7 @@ api.patch = (value, patchDOM) => {
 };
 
 export { api, h, svg };
+export type { Component, El, Tag };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DistributeWire<T> = T extends any ? Wire<T> : never;
