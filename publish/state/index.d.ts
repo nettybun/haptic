@@ -104,9 +104,9 @@ declare const transaction: <T>(fn: () => T) => T;
 
 /**
  * Run a function within the context of a wire. Nested children wires are
- * adopted (see wire.inner). Also affects signal read consistency checks for
+ * adopted (see wire.lower). Also affects signal read consistency checks for
  * read-pass (signal.sigRP) and read-subscribe (signal.sigRS). */
-declare const wireAdopt: <T>(wire: Wire<X>, fn: () => T) => void;
+declare const wireAdopt: <T>(wire: Wire<X> | undefined, fn: () => T) => void;
 
 export {
   createSignal as signal,
