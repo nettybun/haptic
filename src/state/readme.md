@@ -103,10 +103,10 @@ const data = signal({
 document.body.appendChild(
   <div>
     <h1>"{wire(data.text)}"</h1>
-    <p>Uses {wire($ => data.text().length)} characters of text</p>
+    <p>Uses {wire($ => data.text($).length)} characters of text</p>
     <input
       value={wire(data.text)}
-      onChange={(ev) => data.text(ev.currentTarget.value)}
+      onInput={(ev) => data.text(ev.currentTarget.value)}
     />
   </div>
 );
@@ -115,7 +115,7 @@ document.body.appendChild(
 wire($ => {
   console.log('Text was updated to', data.text($)); // Read-Subscribe
   console.log('The count also happens to be', data.count()); // Read-Pass
-});
+})();
 ```
 
 In the above example, typing in the input box updates the text signal and causes

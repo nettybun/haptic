@@ -45,7 +45,7 @@ const data = signal({
 const Page = () =>
   <div>
     <p>Content below changes when <code>data.count > 5</code></p>
-    <button onClick={data.count(data.count() + 1)}>
+    <button onClick={() => data.count(data.count() + 1)}>
       Increment to {wire(data.countNext)}
     </button>
     {when($ => data.count($) > 5 ? "T" : "F", {
