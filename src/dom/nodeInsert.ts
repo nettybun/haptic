@@ -2,7 +2,7 @@ import { api } from './index.js';
 
 type Frag = { _startMark: Text };
 
-/** Insert a node into an existing node */
+/** Insert a node into an existing node. */
 const insert = (el: Node, value: unknown, endMark?: Node, current?: Node | Frag, startNode?: ChildNode | null) => {
   // This is needed if the el is a DocumentFragment initially.
   el = (endMark && endMark.parentNode) || el;

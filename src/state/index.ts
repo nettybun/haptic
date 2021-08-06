@@ -144,7 +144,8 @@ const _runWires = (wires: Set<Wire<X>>): void => {
       wire.state |= S_NEEDS_RUN;
     }
     // TODO: Test (#3) + Benchmark with main branch
-    // If a wire's ancestor will run it'll destroy its children so remove them:
+    // If a wire's ancestor will run it'll destroy its lower wires. It's more
+    // efficient to not call them at all by deleting from the run list:
     curr = wire;
     while ((curr = curr.upper))
       if (toRun.has(curr)) return toRun.delete(wire);
@@ -204,20 +205,20 @@ const signalBase = <T>(value: T, id = ''): Signal<T> => {
       if ((read as W).sigRP.has(signal)) {
         throw new Error(`${(read as W).name} mixes sig($) & sig()`);
       }
-      // Two-way link. Signal writes will now call/update wire C
+      // Two-way link. Signal writes will now call/update wire W
       (read as W).sigRS.add(signal);
       signal.wires.add((read as W));
 
-      // Computed-signals can't only run C when written to, they also need to
-      // run C when signal.cw is marked stale. How do we know when that happens?
+      // Computed-signals can't only run W when written to, they also need to
+      // run W when signal.cw is marked stale. How do we know when that happens?
       // It's when a cw.sigRS signal tries to call signal.cw. So adding `read`
-      // to each signal in cw.sigRS will call C as collateral.
+      // to each signal in cw.sigRS will call W as collateral.
       if (signal.cw) {
         // Run early if sigRS isn't ready (see "Update if needed" line below)
         if (signal.cw.state & S_NEEDS_RUN) signal.cw();
         signal.cw.sigRS.forEach((_signal) => {
           // Linking _must_ be two-way. From signal.wires to wire.sigXYZ. Until
-          // now it's always either sigRP or sigRP, but if we use those we'll
+          // now it's always either sigRS or sigRP, but if we use those we'll
           // break the mix error checking (above). So use a new list, sigIC.
           (read as W).sigIC.add(_signal);
           _signal.wires.add((read as W));
@@ -316,8 +317,8 @@ const transaction = <T>(fn: () => T): T => {
 };
 
 /**
- * Run a function within the context of a wire. Nested children wires are
- * adopted (see wire.lower). Also affects signal read consistency checks for
+ * Run a function within the context of a wire. Wires created in this context
+ * are adopted (see wire.lower). This affects signal read consistency checks for
  * read-pass (signal.sigRP) and read-subscribe (signal.sigRS). */
 const wireAdopt = <T>(wire: Wire<X> | undefined, fn: () => T): void => {
   const prev = activeWire;

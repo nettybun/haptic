@@ -4,7 +4,7 @@ import { api } from './index.js';
 type EventHandler = (ev: Event) => unknown;
 type NodeEvented = Node & { $l?: { [name: string]: EventHandler } };
 
-/** Set attributes and propeties on a node */
+/** Set attributes and propeties on a node. */
 export const property = (el: Node, value: unknown, name: string | null, isAttr?: boolean, isCss?: boolean) => {
   if (value == null) {}
   else if (!name) {

@@ -1,4 +1,4 @@
-/** Removes nodes, starting from `startNode` (inclusive) to `endMark` (exclusive) */
+/** Removes nodes from `startNode` (inclusive) to `endMark` (exclusive). */
 const remove = (parent: Node, startNode: ChildNode | null, endMark: Node) => {
   while (startNode && startNode !== endMark) {
     const n = startNode.nextSibling;

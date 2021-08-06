@@ -29,7 +29,7 @@ const maybeFragOrNode = (value: Text | Node | DocumentFragment): FragReturn => {
   return { _startMark: api.add(value, '', childNodes[0]) as Text };
 };
 
-/** Add a node before a reference node or at the end */
+/** Add a node before a reference node or at the end. */
 const add = (parent: Node, value: Value | Value[], endMark?: Node) => {
   value = asNode(value);
   const fragOrNode = maybeFragOrNode(value) || value;

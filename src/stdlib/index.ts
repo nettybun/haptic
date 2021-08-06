@@ -6,7 +6,7 @@ import type { El } from 'haptic/dom';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-/** Switches DOM content when signals of the condition wire are written to */
+/** Switches DOM content by creating a wire responds to a changing condition. */
 const when = <T extends string>(
   condition: ($: SubToken) => T,
   views: { [k in T]?: () => El }
