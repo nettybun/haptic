@@ -24,19 +24,17 @@ declare namespace h {
     }
     type DOMAttributes<Target extends EventTarget>
       = GenericEventAttrs<Target>
-      & { children?: unknown;
-    };
+      & { children?: unknown };
     type HTMLAttributes<Target extends EventTarget>
       = AllowWireForProperties<Omit<HTMLAttrs, 'style'>>
-      & { style?: MaybeWire<string> | { [key: string]: MaybeWire<string | number>; }; }
+      & { style?: MaybeWire<string> | { [key: string]: MaybeWire<string | number> } }
       & DOMAttributes<Target>;
     type SVGAttributes<Target extends EventTarget>
       = AllowWireForProperties<SVGAttrs>
       & HTMLAttributes<Target>;
-
-    type IntrinsicElements =
-      & { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>; }
-      & { [El in keyof SVGElements]: SVGAttributes<SVGElements[El]>; };
+    type IntrinsicElements
+      = { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]> }
+      & { [El in keyof SVGElements]: SVGAttributes<SVGElements[El]> };
   }
 }
 

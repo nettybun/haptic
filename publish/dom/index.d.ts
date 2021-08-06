@@ -17,16 +17,18 @@ declare namespace h {
     interface IntrinsicAttributes {
       children?: never;
     }
-    type DOMAttributes<Target extends EventTarget> = GenericEventAttrs<Target> & {
-      children?: unknown;
-    };
-    type HTMLAttributes<Target extends EventTarget> = HTMLAttrs & DOMAttributes<Target>;
-    type SVGAttributes<Target extends EventTarget> = SVGAttrs & HTMLAttributes<Target>;
-    type IntrinsicElements = {
-      [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]>;
-    } & {
-      [El in keyof SVGElements]: SVGAttributes<SVGElements[El]>;
-    };
+    type DOMAttributes<Target extends EventTarget>
+      = GenericEventAttrs<Target>
+      & { children?: unknown };
+    type HTMLAttributes<Target extends EventTarget>
+      = HTMLAttrs
+      & DOMAttributes<Target>;
+    type SVGAttributes<Target extends EventTarget>
+      = SVGAttrs
+      & HTMLAttributes<Target>;
+    type IntrinsicElements
+      = { [El in keyof HTMLElements]: HTMLAttributes<HTMLElements[El]> }
+      & { [El in keyof SVGElements]: SVGAttributes<SVGElements[El]> };
   }
 }
 
