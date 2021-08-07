@@ -181,7 +181,7 @@ more frequently from now own to avoid this large of a changelog.
 
 - Replace Sinuous' `api.subscribe` with a generic patch callback.
 
-## 0.6.0
+## 0.1.0 - 0.6.0
 
 - Drop computed signals. They're confusing.
 
