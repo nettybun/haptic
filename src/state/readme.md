@@ -19,24 +19,13 @@ It's normal ESM and can be used by itself in any JS environment, no DOM needed.
 
 ## Signals
 
-These are reactive variables and are the dispatchers of the reactive system.
-They break read/write into two types of reads, unlike other reactive libraries:
-read-pass or read-subscribe. This makes subscribing to a signal an explicit and
-visually distinct action from a normal signal read. Haptic is opt-in and doesn't
-need a `sample()` function to support opt-outs.
-
-Any value can be written and stored in a signal. If a wire is written, the
-signal becomes a __lazy computed-signal__ that returns the result of the wire's
-function. These are really efficient and only rerun the wire when dependencies
-mark the result as stale.
+These are reactive read/write variables who notify subscribers when they've been
+written to. They are the only dispatchers in the reactive system.
 
 ```ts
 const state = signal({
   name: 'Deciduous Willow',
   age: 85,
-  // This defines a lazy computed-signal
-  nameReversed: wire(($): string =>
-    state.name().split('').reverse().join()),
 });
 
 state.name;           // [Function: signal|0{name}]
@@ -45,9 +34,25 @@ state.name('Willow');
 state.name();         // 'Willow'
 ```
 
-You'll notice that signals are tagged with a name and identifier. This helps
-debugging. Wires are named this way too. Developer tools show this name by
-default when inspecting values, and this helps greatly with visualizing the
+The subscribers to signals are wires, which will be introduced next. They
+subscribe by read-subscribing the signal. This is an important distinction -
+signals have two types of reads!
+
+```ts
+state.name();  // Passive read (read-pass)
+state.name($); // Subscribed read (read-subscribe)
+```
+
+This is unlike other reactive libraries, but it'll save us a lot of debugging.
+Separating the reads it makes subscribed reads an explicit and visually distinct
+action from passive reads. This makes Haptic an opt-in design, and it doesn't
+need the `sample()` function seen in other libraries. This is explained later
+when introducing wires, which is also where the `$` value comes from.
+
+Both signals and wires are tagged with a name and identifier to help debugging.
+In the above example it was `signal|0{name}`. This is the actual JS function
+name, so developer tools will show it by default when inspecting values, logging
+to the console, and in error stacktraces. It helps greatly with visualizing the
 subscriptions between signals and wires.
 
 Sometimes defining an entire state object can be too much overhead. To skip
@@ -62,6 +67,12 @@ const { ans } = signal({ ans: 100 });
 const ans = signal.anon(100);
 ```
 
+Any value can be written and stored in a signal, but if a wire is written, the
+signal becomes a __lazy computed-signal__ that returns the result of the wire's
+function. It's like using a formula in a spreadsheet. These are really efficient
+and only rerun the wire when dependencies mark the result as stale. These are
+introduced later on.
+
 ## Wires
 
 These are task runners who subscribe to signals and react to signal writes. They
@@ -69,7 +80,36 @@ hold a function (the task) and manage its subscriptions, nested wires, run
 count, and other metadata. The wire provides a "\$" token to the function call
 that, at your discretion as the developer, can use to read-subscribe to signals.
 
-Here are some features about wires:
+```ts
+wire($ => {
+  // Explicitly subscribe to state.name using the subtoken "$"
+  console.log("Update to state.name:", state.name($));
+})
+```
+
+Earlier, when introducing signals, I mentioned a `sample()` method isn't needed.
+Let's dive into that. Consider this code:
+
+```ts
+wire($ => {
+  const name = state.name($);
+  console.log("Update to state.name:", name);
+  // Calling a function...
+  if (name.length > 10) pushToNameQueue(name);
+})
+```
+
+**_Is this safe?_** i.e can we predict the subscriptions for this system? In
+many reactive libraries the answer is no... We don't know what's happening in
+that function call, so it could make any number of subscriptions by reading
+other signals. These accidental subscriptions would cause unexpected runs that
+can be hard to debug. **In Haptic, it's safe**. The `$` token wasn't passed to
+the function call, so we can guarantee our wire only subscribes to `state.name`.
+
+In other libraries you need to remember to wrap all function calls in `sample()`
+to opt-out of subscriptions. In Haptic, you pass around "$".
+
+Here's some other features about wires:
 
   - They track which signals are read-passed and which are read-subscribed to
     maintain read consistency; if the same signal does `sig($)` and `sig()` the
@@ -92,6 +132,9 @@ Here are some features about wires:
   - In the rare case that a function (maybe third party) requires a "\$" token
     as a parameter but you don't want to consent to unknown subscriptions in
     your wire, you can import and pass the void-token "\$v" instead.
+
+Lastly, this is a more complex example using wires and signals to build a small
+application:
 
 ```tsx
 const data = signal({
@@ -124,8 +167,41 @@ don't update anything; no one is subscribed.
 
 ## Computed-Signals
 
-// TODO: Example of lazy execution where "expensive calculation" isn't run until
-necessary (when it's read by an effect wire)
+This is Haptic's version of a `computed()` seen in other reactive libraries.
+It's like writing a formula in a spreadsheet cell rather than a static value.
+
+```ts
+const state = signal({
+  name: 'Deciduous Willow',
+  age: 85,
+  // This defines a lazy computed-signal
+  nameReversed: wire(($): string =>
+    state.name($).split('').reverse().join()),
+});
+```
+
+The wire for `nameReversed` has never run at this point. It will only run when
+the signal is read, such as `state.nameReversed()`. It'll cache this value, so
+subsequent reads are cheap and avoid the computation. When `name` is changed, it
+marks `nameReversed` as stale, so the next read will require the wire run.
+
+Here's another example that reads/runs computed-signals "backwards" while still
+behaving as expected:
+
+```ts
+const state = signal({
+  count: 45,
+  countSquared(wire($ => state.count($) ** 2)),
+  countSquaredPlusFive(wire($ => state.countSquared($) + 5)),
+});
+// Note that the computation has never run up to now. They're _lazy_.
+
+// Calling countSquaredPlusFive will run countSquared, since it's a dependency.
+state.countSquaredPlusFive(); // 2030
+
+// Calling countSquared does _no work_. It's not stale. The value is cached.
+state.countSquared(); // 2025
+```
 
 ---
 

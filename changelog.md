@@ -94,8 +94,8 @@ more frequently from now own to avoid this large of a changelog.
   });
   // Note that the computation has never run up to now. They're _lazy_.
 
-  // Calling countSquaredPlusOne will run countSquared, since it's a dependency.
-  state.countSquaredPlusOne(); // 2030
+  // Calling countSquaredPlusFive will run countSquared, since it's a dependency.
+  state.countSquaredPlusFive(); // 2030
 
   // Calling countSquared does _no work_. It's not stale. The value is cached.
   state.countSquared(); // 2025
