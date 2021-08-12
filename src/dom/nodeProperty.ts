@@ -4,12 +4,16 @@ import { api } from './index.js';
 type EventHandler = (ev: Event) => unknown;
 type NodeEvented = Node & { $l?: { [name: string]: EventHandler } };
 
+// Note that isAttr is never set. It exists mostly to maintain API compatibility
+// with Sinuous and its community packages. However, it's also possible to wrap
+// the api.property function and set isAttr from there if needed
+
 /** Set attributes and propeties on a node. */
 export const property = (el: Node, value: unknown, name: string | null, isAttr?: boolean, isCss?: boolean) => {
   if (value == null) {}
   else if (!name) {
     for (name in value as { [k: string]: unknown }) {
-      api.property(el, (value as { [k: string]: unknown })[name], name, isAttr = true, isCss);
+      api.property(el, (value as { [k: string]: unknown })[name], name, isAttr, isCss);
     }
   }
   // Functions added as event handlers are not executed on render
