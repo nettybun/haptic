@@ -71,8 +71,11 @@ esbuild.build({
     (byExt[x] || (byExt[x] = [])).push(outFile);
   }
   // Fix path since esbuild does it wrong based off the Chrome debugger...
+  // TODO: Many values are _still_ undefined... I'll need to compare to rollup
   for (const { text, path: filepath } of byExt['.map']!) {
-    fs.writeFileSync(filepath, text.replace(/"[./]+src/g, '"./src'));
+    fs.writeFileSync(filepath, text
+      .replace(/"\..*?\/(\w+)\.ts"/g, '"./$1.ts"')
+    );
   }
   for (const { contents, path: filepath } of byExt['.js']!) {
     const name = relName(filepath);
