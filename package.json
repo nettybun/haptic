@@ -1,6 +1,6 @@
 {
   "name": "haptic",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Reactive TSX library in 1.6kb with no compiler, no magic, and no virtual DOM.",
   "type": "module",
   "main": "./publish/index.js",

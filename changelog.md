@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.10.1
+
+- Fix an issue where properties were being set via `el.setAttribute('xyz', ...)`
+  rather than `el['xyz'] = ...`. This lead to subtle but unexpected behaviour,
+  particularly in situations like `<input value={wire(...)} />`.
+
+  This was an oversight when removing support for `attrs` from the previous
+  Sinuous implementation:
+
+  - https://github.com/luwes/sinuous/discussions/180
+  - https://github.com/heyheyhello/haptic/commit/71155e689724f580dde2585145b1d0d5b32922e1
+
+- The build script now help with preparing the publishing area to make publishes
+  less stressful. It also shows the delta in min+gz sizes compared to the
+  previous build and tweaks sourcemaps.
+
+  ```
+  > npm run build
+  dom/index.js     min:1928  min+gzip:955  Δ:0
+  state/index.js   min:1916  min+gzip:909  Δ:0
+  stdlib/index.js  min:508   min+gzip:301  Δ:+45
+  index.js         min:155   min+gzip:144  Δ:0
+  ```
+
 ## 0.10.0
 
 The API is nearly settled and hopefully the next major release will be 1.0.0.
