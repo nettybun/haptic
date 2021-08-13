@@ -3,8 +3,8 @@
   "version": "0.10.0",
   "description": "Reactive TSX library in 1.6kb with no compiler, no magic, and no virtual DOM.",
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.d.ts",
+  "main": "./publish/index.js",
+  "types": "./publish/index.d.ts",
   "license": "MIT",
   "author": "Gen Hames",
   "exports": {

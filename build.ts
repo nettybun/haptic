@@ -1,6 +1,7 @@
 import * as esbuild from 'esbuild';
+import * as fs from 'fs';
+import * as path from 'path';
 import { gzipSync } from 'fflate';
-import { readFileSync } from 'fs';
 
 const entryPoints = [
   'src/dom/index.ts',
@@ -26,6 +27,32 @@ const external = [
   'haptic/stdlib',
 ];
 
+const noComment = (a: Uint8Array) => a.subarray(0, -'\n//# sourceMappingURL=index.js.map'.length);
+const gzip = (a: Uint8Array) => gzipSync(a, { level: 9 });
+const relName = (filepath: string) => filepath.replace(/.*publish\//, '');
+const pad = (x: unknown, n: number) => String(x).padEnd(n);
+
+function walk(dir: string, ext: string, matches: string[] = []) {
+  const files = fs.readdirSync(dir);
+  for (const filename of files) {
+    const filepath = path.join(dir, filename);
+    if (fs.statSync(filepath).isDirectory()) {
+      walk(filepath, ext, matches);
+    } else if (path.extname(filename) === ext) {
+      matches.push(filepath);
+    }
+  }
+  return matches;
+}
+
+// Gather existing sizes to compare to later on
+const prevJSFiles = walk('publish', '.js');
+const prevJSSizes: { [k: string]: number } = {};
+prevJSFiles.forEach((filepath) => {
+  prevJSSizes[relName(filepath)]
+    = gzip(noComment(fs.readFileSync(filepath))).length;
+});
+
 esbuild.build({
   entryPoints,
   outdir: 'publish',
@@ -33,22 +60,33 @@ esbuild.build({
   format: 'esm',
   bundle: true,
   sourcemap: true,
+  // This is better than Terser
   minify: true,
-  metafile: true,
+  write: false,
   define,
 }).then((build) => {
-  // All bundles are "index.js" so far
-  const sourceComment = '\n//# sourceMappingURL=index.js.map';
-  const pad = (x: unknown, n: number) => String(x).padEnd(n);
-
-  // Using buildResult.outputFiles would skip needing to read the file
-  for (const file of Object.keys(build.metafile!.outputs)) {
-    if (file.endsWith('.map')) continue;
-    const min = readFileSync(file).subarray(0, -sourceComment.length);
-    const mingz = gzipSync(min, { level: 9 });
-    const name = file.replace('publish/', '');
+  const byExt: { [filepath: string]: esbuild.OutputFile[] } = {};
+  for (const outFile of build.outputFiles) {
+    const x = path.extname(outFile.path);
+    (byExt[x] || (byExt[x] = [])).push(outFile);
+  }
+  // Fix path since esbuild does it wrong based off the Chrome debugger...
+  for (const { text, path: filepath } of byExt['.map']!) {
+    fs.writeFileSync(filepath, text.replace(/"[./]+src/g, '"./src'));
+  }
+  for (const { contents, path: filepath } of byExt['.js']!) {
+    const name = relName(filepath);
+    const min = noComment(contents);
+    const mingz = gzip(min);
+    let delta = '';
+    if (prevJSSizes[name]) {
+      const num = mingz.length - prevJSSizes[name]!;
+      delta = `Δ:${num > 0 ? `+${num}` : num}`;
+    }
+    fs.writeFileSync(filepath, contents);
     console.log(
-      `${pad(name, 15)} min:${pad(min.length, 5)} min+gzip:${mingz.length}`);
+      `${pad(name, 16)} min:${pad(min.length, 5)} min+gzip:${pad(mingz.length, 4)} ${delta}`
+    );
   }
 }).catch((err) => {
   console.error('ESM', err);
@@ -70,3 +108,22 @@ esbuild.build({
   console.error('CJS', err);
   process.exit(1);
 });
+
+// Other files for publishing
+fs.copyFileSync('./license', './publish/license');
+fs.copyFileSync('./src/jsx.d.ts', './publish/jsx.d.ts');
+
+fs.writeFileSync('./publish/readme.md',
+  fs.readFileSync('./readme.md', 'utf-8')
+    .replace(
+      /.\/src\/(\w+)\/readme.md/g,
+      'https://github.com/heyheyhello/haptic/tree/main/src/$1/')
+);
+
+// Need to tweak package.json on write
+fs.writeFileSync('./publish/package.json',
+  fs.readFileSync('./package.json', 'utf-8')
+    .replaceAll('./publish/', './')
+    .replace(/,?\s*"scripts": {.*?}/ms, '')
+    .replace(/,?\s*"devDependencies": {.*?}/ms, '')
+);
